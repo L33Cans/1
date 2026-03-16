@@ -1,0 +1,2182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LogicLift — Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════ */
+:root {
+  --ink:      #07090d;
+  --base:     #0c0f14;
+  --lift:     #121620;
+  --lift2:    #181d28;
+  --edge:     #1f2535;
+  --edge2:    #28304a;
+  --gold:     #f0a500;
+  --gold2:    #f7c040;
+  --gold-dim: rgba(240,165,0,0.10);
+  --gold-glow:0 0 32px rgba(240,165,0,0.22);
+  --cyan:     #00d4c8;
+  --cyan-dim: rgba(0,212,200,0.10);
+  --rose:     #ff4466;
+  --rose-dim: rgba(255,68,102,0.10);
+  --mint:     #2dffb0;
+  --mint-dim: rgba(45,255,176,0.08);
+  --text:     #dde4f0;
+  --text-2:   #8a95b0;
+  --text-3:   #424d66;
+  --ff-head:  'Bebas Neue', sans-serif;
+  --ff-mono:  'IBM Plex Mono', monospace;
+  --ff-body:  'IBM Plex Sans', sans-serif;
+  --r:        10px;
+  --r-lg:     16px;
+}
+
+/* ═══ RESET & BASE ═══ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--ff-body);
+  font-size: 14px;
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* ═══ NOISE + GRID TEXTURE ═══ */
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    repeating-linear-gradient(0deg,   transparent, transparent 47px, rgba(255,255,255,0.013) 47px, rgba(255,255,255,0.013) 48px),
+    repeating-linear-gradient(90deg,  transparent, transparent 47px, rgba(255,255,255,0.008) 47px, rgba(255,255,255,0.008) 48px);
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 55% 45% at 15% 10%,  rgba(240,165,0,0.05)  0%, transparent 65%),
+    radial-gradient(ellipse 40% 60% at 90% 80%,  rgba(0,212,200,0.03)  0%, transparent 55%),
+    radial-gradient(ellipse 30% 40% at 60% 50%,  rgba(255,68,102,0.02) 0%, transparent 50%);
+}
+
+/* ═══ SIDEBAR ═══ */
+.sidebar {
+  width: 240px; flex-shrink: 0;
+  background: var(--base);
+  border-right: 1px solid var(--edge);
+  display: flex; flex-direction: column;
+  position: fixed; left: 0; top: 0; bottom: 0;
+  z-index: 100; padding: 0;
+  transition: width .25s ease;
+}
+.sidebar.collapsed { width: 64px; }
+
+.sb-header {
+  padding: 22px 20px 20px;
+  border-bottom: 1px solid var(--edge);
+  display: flex; align-items: center; gap: 12px;
+}
+.sb-logo {
+  width: 36px; height: 36px; flex-shrink: 0;
+  background: var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--ff-head); font-size: 17px; color: #000;
+  clip-path: polygon(0 0, 88% 0, 100% 12%, 100% 100%, 12% 100%, 0 88%);
+}
+.sb-brand {
+  font-family: var(--ff-head); font-size: 22px; letter-spacing: 1.5px;
+  color: var(--text); white-space: nowrap; overflow: hidden;
+  transition: opacity .2s;
+}
+.sb-brand span { color: var(--gold); }
+.sidebar.collapsed .sb-brand { opacity: 0; width: 0; }
+
+.sb-admin-tag {
+  font-family: var(--ff-mono); font-size: 8px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--gold);
+  background: var(--gold-dim); border: 1px solid rgba(240,165,0,.25);
+  padding: 2px 8px; border-radius: 4px; white-space: nowrap;
+  transition: opacity .2s;
+}
+.sidebar.collapsed .sb-admin-tag { opacity: 0; }
+
+.sb-nav { flex: 1; padding: 14px 10px; overflow-y: auto; overflow-x: hidden; }
+.sb-section-label {
+  font-family: var(--ff-mono); font-size: 8px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--text-3);
+  padding: 10px 10px 6px; white-space: nowrap; overflow: hidden;
+  transition: opacity .2s;
+}
+.sidebar.collapsed .sb-section-label { opacity: 0; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 10px; border-radius: 8px;
+  cursor: pointer; transition: all .15s;
+  color: var(--text-2); font-size: 13px; font-weight: 400;
+  white-space: nowrap; overflow: hidden;
+  position: relative; margin-bottom: 2px;
+}
+.nav-item:hover { background: var(--lift2); color: var(--text); }
+.nav-item.active { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(240,165,0,.2); }
+.nav-item .ni-icon { font-size: 16px; flex-shrink: 0; width: 20px; text-align: center; }
+.nav-item .ni-label { overflow: hidden; transition: opacity .2s, width .2s; }
+.sidebar.collapsed .ni-label { opacity: 0; width: 0; }
+.nav-item .ni-badge {
+  margin-left: auto; background: var(--rose); color: #fff;
+  font-family: var(--ff-mono); font-size: 9px; font-weight: 600;
+  padding: 1px 6px; border-radius: 10px; flex-shrink: 0;
+  transition: opacity .2s;
+}
+.sidebar.collapsed .ni-badge { opacity: 0; }
+
+.sb-footer {
+  padding: 14px 10px;
+  border-top: 1px solid var(--edge);
+}
+.sb-admin-user {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 8px;
+  overflow: hidden;
+}
+.admin-avatar {
+  width: 32px; height: 32px; flex-shrink: 0;
+  background: var(--gold); border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--ff-head); font-size: 15px; color: #000;
+}
+.admin-info { overflow: hidden; transition: opacity .2s; }
+.admin-info .name { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.admin-info .role { font-family: var(--ff-mono); font-size: 9px; color: var(--gold); letter-spacing: 0.1em; }
+.sidebar.collapsed .admin-info { opacity: 0; width: 0; }
+
+/* ═══ MAIN CONTENT ═══ */
+.main {
+  margin-left: 240px;
+  flex: 1; display: flex; flex-direction: column;
+  min-height: 100vh; transition: margin-left .25s ease;
+}
+.main.expanded { margin-left: 64px; }
+
+/* ═══ TOP BAR ═══ */
+.topbar {
+  height: 60px; display: flex; align-items: center;
+  padding: 0 28px; gap: 16px;
+  background: rgba(12,15,20,0.95);
+  border-bottom: 1px solid var(--edge);
+  backdrop-filter: blur(12px);
+  position: sticky; top: 0; z-index: 50;
+}
+.collapse-btn {
+  width: 32px; height: 32px; border-radius: 7px;
+  background: var(--lift); border: 1px solid var(--edge2);
+  color: var(--text-2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; transition: all .15s; flex-shrink: 0;
+}
+.collapse-btn:hover { color: var(--text); border-color: var(--text-3); }
+
+.topbar-title {
+  font-family: var(--ff-head); font-size: 20px;
+  letter-spacing: 1px; color: var(--text);
+}
+.topbar-title span { color: var(--gold); }
+
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+.sys-status {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--ff-mono); font-size: 10px; color: var(--text-2);
+  background: var(--lift); border: 1px solid var(--edge2);
+  padding: 6px 12px; border-radius: 6px;
+}
+.sys-dot { width: 6px; height: 6px; border-radius: 50%; }
+.sys-dot.ok { background: var(--mint); box-shadow: 0 0 6px var(--mint); animation: pulse-dot 2s ease infinite; }
+.sys-dot.warn { background: var(--gold); box-shadow: 0 0 6px var(--gold); animation: pulse-dot 1s ease infinite; }
+
+.topbar-notif {
+  width: 34px; height: 34px; border-radius: 7px;
+  background: var(--lift); border: 1px solid var(--edge2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 15px; position: relative;
+  transition: border-color .15s;
+}
+.topbar-notif:hover { border-color: var(--gold); }
+.notif-pip {
+  position: absolute; top: 5px; right: 5px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--rose); border: 1px solid var(--ink);
+}
+
+.topbar-clock { font-family: var(--ff-mono); font-size: 11px; color: var(--text-3); }
+
+/* ═══ PAGE CONTENT ═══ */
+.content { padding: 26px 28px 60px; flex: 1; }
+
+/* ═══ PAGE ═══ */
+.page { display: none; animation: fadeUp .3s ease both; }
+.page.active { display: block; }
+
+/* ═══ PAGE HEADER ═══ */
+.page-header { margin-bottom: 24px; }
+.page-eyebrow { font-family: var(--ff-mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 4px; }
+.page-title { font-family: var(--ff-head); font-size: 38px; letter-spacing: 1px; line-height: 1; margin-bottom: 6px; }
+.page-desc { font-size: 13px; color: var(--text-2); font-weight: 300; }
+
+/* ═══ GRID LAYOUTS ═══ */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.g3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+.g4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+.g5 { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; }
+
+/* ═══ CARDS ═══ */
+.card {
+  background: var(--lift);
+  border: 1px solid var(--edge);
+  border-radius: var(--r-lg);
+  padding: 20px;
+  position: relative; overflow: hidden;
+  transition: border-color .2s, box-shadow .2s;
+}
+.card:hover { border-color: var(--edge2); }
+.card.gld { border-color: rgba(240,165,0,.2); }
+.card.gld::before { content:''; position:absolute; inset:0; background: var(--gold-dim); pointer-events:none; }
+.card.cyn { border-color: rgba(0,212,200,.2); }
+.card.cyn::before { content:''; position:absolute; inset:0; background: var(--cyan-dim); pointer-events:none; }
+.card.rse { border-color: rgba(255,68,102,.2); }
+.card.rse::before { content:''; position:absolute; inset:0; background: var(--rose-dim); pointer-events:none; }
+.card.mnt { border-color: rgba(45,255,176,.15); }
+.card.mnt::before { content:''; position:absolute; inset:0; background: var(--mint-dim); pointer-events:none; }
+
+.card-label {
+  font-family: var(--ff-mono); font-size: 9px; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--text-3);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+.card-num {
+  font-family: var(--ff-head); font-size: 48px; line-height: 1;
+  letter-spacing: -0.5px;
+}
+.card-sub { font-family: var(--ff-mono); font-size: 10px; color: var(--text-2); margin-top: 5px; }
+.card-change { font-family: var(--ff-mono); font-size: 10px; margin-top: 4px; }
+.up { color: var(--mint); } .dn { color: var(--rose); } .nt { color: var(--gold); }
+
+/* ═══ KPI ROW ═══ */
+.kpi-row { display: flex; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+.kpi-item {
+  flex: 1; min-width: 140px;
+  background: var(--lift); border: 1px solid var(--edge);
+  border-radius: var(--r); padding: 16px 18px;
+  position: relative; overflow: hidden; cursor: default;
+  transition: border-color .2s;
+}
+.kpi-item:hover { border-color: var(--edge2); }
+.kpi-item::after {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.kpi-item.gold::after { background: var(--gold); }
+.kpi-item.cyan::after { background: var(--cyan); }
+.kpi-item.rose::after { background: var(--rose); }
+.kpi-item.mint::after { background: var(--mint); }
+.kpi-item.blue::after { background: #6699ff; }
+
+.kpi-lbl { font-family: var(--ff-mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); margin-bottom: 8px; }
+.kpi-val { font-family: var(--ff-head); font-size: 34px; line-height: 1; }
+.kpi-val.gold { color: var(--gold); }
+.kpi-val.cyan { color: var(--cyan); }
+.kpi-val.rose { color: var(--rose); }
+.kpi-val.mint { color: var(--mint); }
+.kpi-val.blue { color: #6699ff; }
+.kpi-delta { font-family: var(--ff-mono); font-size: 10px; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+
+/* ═══ TABLE ═══ */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead th {
+  font-family: var(--ff-mono); font-size: 9px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--text-3);
+  padding: 10px 14px; text-align: left;
+  border-bottom: 1px solid var(--edge);
+  background: var(--lift2); white-space: nowrap;
+}
+thead th.sort { cursor: pointer; user-select: none; }
+thead th.sort:hover { color: var(--text-2); }
+tbody tr { transition: background .12s; }
+tbody tr:hover td { background: rgba(255,255,255,.015); }
+tbody td {
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(31,37,53,.7);
+  color: var(--text-2); vertical-align: middle;
+}
+tbody tr:last-child td { border-bottom: none; }
+
+/* ═══ USER AVATAR ═══ */
+.avatar {
+  width: 34px; height: 34px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--ff-head); font-size: 15px; color: #000;
+  flex-shrink: 0;
+}
+.av-gold { background: var(--gold); }
+.av-cyan { background: var(--cyan); }
+.av-rose { background: var(--rose); color: #fff; }
+.av-mint { background: var(--mint); }
+.av-blue { background: #6699ff; color: #fff; }
+.av-purple { background: #aa77ff; color: #fff; }
+
+/* ═══ PILLS / BADGES ═══ */
+.pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--ff-mono); font-size: 9px; letter-spacing: 0.08em;
+  padding: 3px 9px; border-radius: 100px; text-transform: uppercase; font-weight: 600;
+}
+.pill-gold  { background: rgba(240,165,0,.12);  border: 1px solid rgba(240,165,0,.3);  color: var(--gold);  }
+.pill-cyan  { background: rgba(0,212,200,.10);   border: 1px solid rgba(0,212,200,.25); color: var(--cyan);  }
+.pill-rose  { background: rgba(255,68,102,.10);  border: 1px solid rgba(255,68,102,.3); color: var(--rose);  }
+.pill-mint  { background: rgba(45,255,176,.08);  border: 1px solid rgba(45,255,176,.25);color: var(--mint);  }
+.pill-blue  { background: rgba(102,153,255,.10); border: 1px solid rgba(102,153,255,.3);color: #6699ff; }
+.pill-dim   { background: var(--lift2);          border: 1px solid var(--edge2);        color: var(--text-3);}
+.pill-dot { width:5px; height:5px; border-radius: 50%; background: currentColor; }
+
+/* ═══ BUTTONS ═══ */
+.btn {
+  font-family: var(--ff-mono); font-size: 10px; letter-spacing: 0.1em;
+  text-transform: uppercase; font-weight: 600;
+  padding: 9px 18px; border-radius: 7px; border: none;
+  cursor: pointer; transition: all .15s;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.btn-gold  { background: var(--gold); color: #000; }
+.btn-gold:hover  { background: var(--gold2); transform: translateY(-1px); box-shadow: var(--gold-glow); }
+.btn-ghost { background: transparent; border: 1px solid var(--edge2); color: var(--text-2); }
+.btn-ghost:hover { border-color: var(--text-3); color: var(--text); }
+.btn-rose  { background: transparent; border: 1px solid rgba(255,68,102,.3); color: var(--rose); }
+.btn-rose:hover  { background: var(--rose-dim); }
+.btn-cyan  { background: transparent; border: 1px solid rgba(0,212,200,.3); color: var(--cyan); }
+.btn-cyan:hover  { background: var(--cyan-dim); }
+.btn-sm { padding: 6px 12px; font-size: 9px; }
+.btn-xs { padding: 4px 9px; font-size: 8px; border-radius: 5px; }
+
+/* ═══ FORM ELEMENTS ═══ */
+label.fl { display: block; font-family: var(--ff-mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-3); margin-bottom: 6px; }
+.fi {
+  width: 100%; background: var(--lift2); border: 1px solid var(--edge2);
+  color: var(--text); font-family: var(--ff-mono); font-size: 12px;
+  padding: 10px 14px; border-radius: 8px; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.fi:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(240,165,0,.08); }
+textarea.fi { resize: vertical; min-height: 80px; line-height: 1.6; font-family: var(--ff-mono); }
+.fr2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.fc { margin-bottom: 14px; }
+
+/* ═══ TOGGLE SWITCH ═══ */
+.sw { position: relative; display: inline-block; width: 38px; height: 21px; }
+.sw input { opacity: 0; width: 0; height: 0; }
+.sw-track {
+  position: absolute; inset: 0; background: var(--edge2);
+  border-radius: 100px; cursor: pointer; transition: background .2s;
+}
+.sw-track::after {
+  content: ''; position: absolute; left: 3px; top: 3px;
+  width: 15px; height: 15px; background: var(--text-3);
+  border-radius: 50%; transition: all .2s;
+}
+.sw input:checked + .sw-track { background: var(--gold); }
+.sw input:checked + .sw-track::after { left: 20px; background: #000; }
+
+/* ═══ PROGRESS BAR ═══ */
+.prog { height: 4px; background: var(--lift2); border-radius: 2px; overflow: hidden; }
+.prog-fill { height: 100%; border-radius: 2px; transition: width .8s cubic-bezier(.4,0,.2,1); }
+
+/* ═══ MODAL ═══ */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.75); backdrop-filter: blur(8px);
+  z-index: 500; align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--lift); border: 1px solid var(--edge2);
+  border-radius: var(--r-lg); padding: 30px;
+  width: 90%; max-width: 520px;
+  animation: fadeUp .3s ease; position: relative;
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-title { font-family: var(--ff-head); font-size: 24px; letter-spacing: .5px; margin-bottom: 20px; }
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 28px; height: 28px; border-radius: 6px;
+  background: var(--lift2); border: 1px solid var(--edge2);
+  color: var(--text-2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; transition: all .15s;
+}
+.modal-close:hover { color: var(--text); border-color: var(--text-3); }
+
+/* ═══ TOAST ═══ */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--lift); border: 1px solid var(--edge2);
+  border-radius: var(--r); padding: 13px 18px;
+  font-family: var(--ff-mono); font-size: 11px; color: var(--text);
+  z-index: 900; transform: translateY(80px); opacity: 0;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  display: flex; align-items: center; gap: 10px;
+  max-width: 340px; box-shadow: 0 8px 32px rgba(0,0,0,.4);
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ═══ CONFIRM DIALOG ═══ */
+.confirm-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.8); backdrop-filter: blur(6px);
+  z-index: 600; align-items: center; justify-content: center;
+}
+.confirm-overlay.open { display: flex; }
+.confirm-box {
+  background: var(--lift); border: 1px solid var(--edge2);
+  border-radius: var(--r-lg); padding: 28px;
+  width: 380px; text-align: center;
+  animation: fadeUp .25s ease;
+}
+.confirm-box h3 { font-family: var(--ff-head); font-size: 22px; margin-bottom: 10px; }
+.confirm-box p { font-size: 13px; color: var(--text-2); margin-bottom: 22px; line-height: 1.6; }
+.confirm-actions { display: flex; gap: 10px; justify-content: center; }
+
+/* ═══ USER DETAIL DRAWER ═══ */
+.drawer-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 400; backdrop-filter: blur(4px);
+}
+.drawer-overlay.open { display: block; }
+.drawer {
+  position: fixed; right: 0; top: 0; bottom: 0;
+  width: 420px; background: var(--lift);
+  border-left: 1px solid var(--edge2);
+  z-index: 401; padding: 28px;
+  transform: translateX(100%); transition: transform .3s cubic-bezier(.4,0,.2,1);
+  overflow-y: auto;
+}
+.drawer.open { transform: translateX(0); }
+.drawer-close {
+  position: absolute; top: 14px; right: 14px;
+  width: 28px; height: 28px; border-radius: 6px;
+  background: var(--lift2); border: 1px solid var(--edge2);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--text-2); transition: all .15s;
+}
+.drawer-close:hover { color: var(--text); }
+
+/* ═══ CHART CANVAS ═══ */
+canvas.chart { display: block; width: 100%; }
+
+/* ═══ SEARCH BAR ═══ */
+.search-bar { position: relative; }
+.search-bar .fi { padding-left: 36px; }
+.search-bar::before { content:'🔍'; position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:12px; pointer-events:none; }
+
+/* ═══ ACTIVITY ROW ═══ */
+.activity-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid rgba(31,37,53,.6);
+}
+.activity-row:last-child { border-bottom: none; }
+.act-icon-wrap {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.act-body { flex: 1; font-size: 12px; color: var(--text-2); line-height: 1.5; }
+.act-body strong { color: var(--text); }
+.act-time { font-family: var(--ff-mono); font-size: 9px; color: var(--text-3); white-space: nowrap; margin-top: 2px; }
+
+/* ═══ LOG ROW ═══ */
+.log-row {
+  display: grid; grid-template-columns: 90px 62px 1fr 90px 70px;
+  gap: 14px; padding: 8px 14px;
+  border-bottom: 1px solid rgba(31,37,53,.5);
+  font-family: var(--ff-mono); font-size: 10px;
+  transition: background .1s;
+}
+.log-row:hover { background: rgba(255,255,255,.01); }
+.lm { font-weight: 700; }
+.lm.GET { color: var(--mint); } .lm.POST { color: var(--gold); }
+.lm.PUT  { color: var(--cyan); } .lm.DELETE { color: var(--rose); }
+.ls { text-align: right; }
+.ls.s2 { color: var(--mint); } .ls.s4 { color: var(--gold); } .ls.s5 { color: var(--rose); }
+
+/* ═══ HEATMAP ═══ */
+.heatmap { display: grid; grid-template-columns: repeat(53,1fr); gap: 2px; }
+.hm { aspect-ratio:1; border-radius: 2px; cursor: default; }
+.hm0 { background: var(--lift2); }
+.hm1 { background: rgba(240,165,0,.22); }
+.hm2 { background: rgba(240,165,0,.44); }
+.hm3 { background: rgba(240,165,0,.68); }
+.hm4 { background: var(--gold); }
+
+/* ═══ METRIC SPARK ═══ */
+.spark { display: flex; align-items: flex-end; gap: 2px; height: 28px; }
+.spark-b { flex: 1; border-radius: 2px; min-height: 3px; }
+
+/* ═══ PLAN CARD ═══ */
+.plan-card {
+  border: 1px solid var(--edge2); border-radius: var(--r-lg);
+  padding: 22px; position: relative;
+  transition: border-color .2s, transform .2s;
+}
+.plan-card:hover { transform: translateY(-2px); border-color: var(--gold); }
+.plan-card.featured { border-color: rgba(240,165,0,.4); }
+.plan-tag {
+  position: absolute; top: 0; right: 0;
+  background: var(--gold); color: #000;
+  font-family: var(--ff-mono); font-size: 8px; font-weight: 700;
+  letter-spacing: 0.1em; padding: 3px 10px;
+  border-bottom-left-radius: 8px; border-top-right-radius: var(--r-lg);
+}
+.plan-price { font-family: var(--ff-head); font-size: 36px; color: var(--gold); line-height: 1; }
+.plan-name  { font-family: var(--ff-head); font-size: 16px; letter-spacing: 1px; margin-bottom: 3px; }
+.plan-feats { list-style: none; margin: 14px 0; }
+.plan-feats li { font-family: var(--ff-mono); font-size: 10px; color: var(--text-2); padding: 4px 0; border-bottom: 1px solid var(--edge); display: flex; gap: 7px; }
+.plan-feats li::before { content:'✓'; color: var(--mint); flex-shrink: 0; }
+
+/* ═══ DIVIDER ═══ */
+hr.d { border: none; border-top: 1px solid var(--edge); margin: 18px 0; }
+
+/* ═══ SCROLLBAR ═══ */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--edge2); border-radius: 2px; }
+
+/* ═══ SECTION HEADING ═══ */
+.sh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.sh-title { font-family: var(--ff-mono); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-3); }
+
+/* ═══ FEATURE FLAG ROW ═══ */
+.ff-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; background: var(--lift2);
+  border: 1px solid var(--edge); border-radius: 8px; margin-bottom: 7px;
+}
+.ff-info .ff-name { font-size: 12px; font-weight: 500; color: var(--text); }
+.ff-info .ff-desc { font-family: var(--ff-mono); font-size: 9px; color: var(--text-3); margin-top: 2px; }
+
+/* ═══ ROLE BADGE ═══ */
+.role-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; background: var(--lift2);
+  border: 1px solid var(--edge); border-radius: 9px; margin-bottom: 8px;
+}
+
+/* ═══ SERVER METRIC ═══ */
+.srv-metric { margin-bottom: 12px; }
+.srv-metric-top { display: flex; justify-content: space-between; font-family: var(--ff-mono); font-size: 10px; margin-bottom: 4px; }
+
+/* ═══ NOTIFICATION CARD ═══ */
+.ncard {
+  display: flex; gap: 12px; padding: 13px 15px;
+  background: var(--lift); border: 1px solid var(--edge);
+  border-radius: 9px; margin-bottom: 8px; transition: border-color .15s;
+}
+.ncard.unread { border-left: 3px solid var(--gold); }
+.ncard:hover { border-color: var(--edge2); }
+.ncard-body { flex: 1; }
+.ncard-title { font-size: 12px; font-weight: 500; margin-bottom: 3px; }
+.ncard-msg { font-family: var(--ff-mono); font-size: 10px; color: var(--text-2); line-height: 1.5; }
+.ncard-time { font-family: var(--ff-mono); font-size: 9px; color: var(--text-3); white-space: nowrap; }
+
+/* ═══ ANIMATIONS ═══ */
+@keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes spin { to{transform:rotate(360deg)} }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:900px) {
+  .sidebar { width: 64px; }
+  .sidebar .sb-brand,.sidebar .sb-admin-tag,.sidebar .ni-label,.sidebar .ni-badge,.sidebar .admin-info,.sidebar .sb-section-label { opacity:0; width:0; overflow:hidden; }
+  .main { margin-left: 64px; }
+  .g4,.g3 { grid-template-columns: 1fr 1fr; }
+  .g2 { grid-template-columns: 1fr; }
+  .drawer { width: 90%; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ APP ═══════════════ -->
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-header">
+      <div class="sb-logo">LL</div>
+      <div>
+        <div class="sb-brand">Logic<span>Lift</span></div>
+        <div class="sb-admin-tag">⬡ Admin Portal</div>
+      </div>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="sb-section-label">Main</div>
+      <div class="nav-item active" onclick="nav('overview',this)"><span class="ni-icon">⊞</span><span class="ni-label">Overview</span></div>
+      <div class="nav-item" onclick="nav('users',this)"><span class="ni-icon">👥</span><span class="ni-label">User Management</span><span class="ni-badge" id="nb-users">4.8K</span></div>
+      <div class="nav-item" onclick="nav('sessions',this)"><span class="ni-icon">🏋️</span><span class="ni-label">Live Sessions</span><span class="ni-badge" id="nb-live" style="background:var(--mint);color:#000;">12</span></div>
+      <div class="nav-item" onclick="nav('analytics',this)"><span class="ni-icon">📊</span><span class="ni-label">Analytics</span></div>
+      <div class="nav-item" onclick="nav('revenue',this)"><span class="ni-icon">💰</span><span class="ni-label">Revenue & Plans</span></div>
+
+      <div class="sb-section-label" style="margin-top:8px;">System</div>
+      <div class="nav-item" onclick="nav('cv-engine',this)"><span class="ni-icon">🤖</span><span class="ni-label">CV Engine</span></div>
+      <div class="nav-item" onclick="nav('notifications',this)"><span class="ni-icon">🔔</span><span class="ni-label">Notifications</span><span class="ni-badge" id="nb-notif">5</span></div>
+      <div class="nav-item" onclick="nav('api-logs',this)"><span class="ni-icon">📋</span><span class="ni-label">API Logs</span></div>
+      <div class="nav-item" onclick="nav('permissions',this)"><span class="ni-icon">🔐</span><span class="ni-label">Permissions</span></div>
+      <div class="nav-item" onclick="nav('settings',this)"><span class="ni-icon">⚙️</span><span class="ni-label">System Settings</span></div>
+    </nav>
+
+    <div class="sb-footer">
+      <div class="sb-admin-user">
+        <div class="admin-avatar" id="sb-avatar">SR</div>
+        <div class="admin-info">
+          <div class="name" id="sb-name">Sahra Reyes</div>
+          <div class="role">Superadmin</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;">
+        <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;" onclick="logout()">↩ Logout</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main" id="main-area">
+    <div class="topbar">
+      <button class="collapse-btn" onclick="toggleSidebar()">☰</button>
+      <div class="topbar-title" id="topbar-title">Logic<span>Lift</span> Admin</div>
+      <div class="topbar-right">
+        <div class="sys-status"><div class="sys-dot ok" id="sys-dot"></div><span id="sys-label">All Systems Operational</span></div>
+        <div class="topbar-notif" onclick="nav('notifications',document.querySelectorAll('.nav-item')[7])"><span>🔔</span><div class="notif-pip" id="notif-pip"></div></div>
+        <div class="topbar-clock" id="clock"></div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ══════════════════════════════
+           PAGE: OVERVIEW
+      ══════════════════════════════ -->
+      <div class="page active" id="page-overview">
+        <div class="page-header">
+          <div class="page-eyebrow">Control Center</div>
+          <div class="page-title">OVERVIEW</div>
+          <div class="page-desc">Real-time platform health, user activity, and key metrics at a glance.</div>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi-item gold"><div class="kpi-lbl">Total Users</div><div class="kpi-val gold" id="kpi-users">4,821</div><div class="kpi-delta up">↑ +218 this week</div></div>
+          <div class="kpi-item cyan"><div class="kpi-lbl">Active Today</div><div class="kpi-val cyan" id="kpi-dau">1,047</div><div class="kpi-delta up">↑ +12% vs yesterday</div></div>
+          <div class="kpi-item mint"><div class="kpi-lbl">Sessions Today</div><div class="kpi-val mint" id="kpi-sess">2,394</div><div class="kpi-delta up">↑ +8.4%</div></div>
+          <div class="kpi-item rose"><div class="kpi-lbl">Incidents</div><div class="kpi-val rose" id="kpi-inc">2</div><div class="kpi-delta nt">→ Redis latency</div></div>
+          <div class="kpi-item blue"><div class="kpi-lbl">MRR</div><div class="kpi-val blue">$18.2K</div><div class="kpi-delta up">↑ +7.3% MoM</div></div>
+        </div>
+
+        <div class="g2" style="margin-bottom:16px;">
+          <!-- System Health -->
+          <div class="card">
+            <div class="card-label">🖥 System Health</div>
+            <div id="health-bars"></div>
+            <hr class="d">
+            <div class="g3" style="gap:10px;">
+              <div style="text-align:center;"><div style="font-family:var(--ff-head);font-size:22px;color:var(--mint)" id="sh-api">42ms</div><div style="font-family:var(--ff-mono);font-size:9px;color:var(--text-3);">API LATENCY</div></div>
+              <div style="text-align:center;"><div style="font-family:var(--ff-head);font-size:22px;color:var(--gold)" id="sh-mem">1.24GB</div><div style="font-family:var(--ff-mono);font-size:9px;color:var(--text-3);">MEMORY</div></div>
+              <div style="text-align:center;"><div style="font-family:var(--ff-head);font-size:22px;color:var(--cyan)" id="sh-cpu">68%</div><div style="font-family:var(--ff-mono);font-size:9px;color:var(--text-3);">CPU LOAD</div></div>
+            </div>
+          </div>
+
+          <!-- Live Activity -->
+          <div class="card">
+            <div class="sh">
+              <div class="card-label" style="margin:0;">⚡ Live Activity Feed</div>
+              <span class="pill pill-mint" style="font-size:8px;"><span class="pill-dot"></span>Live</span>
+            </div>
+            <div id="live-feed" style="max-height:240px;overflow-y:auto;"></div>
+          </div>
+        </div>
+
+        <!-- Heatmap -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-label" style="margin-bottom:14px;">📅 Platform Activity Heatmap — Past Year</div>
+          <div class="heatmap" id="heatmap"></div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:10px;font-family:var(--ff-mono);font-size:9px;color:var(--text-3);">
+            Less
+            <div class="hm hm0" style="width:11px;height:11px;display:inline-block;"></div>
+            <div class="hm hm1" style="width:11px;height:11px;display:inline-block;"></div>
+            <div class="hm hm2" style="width:11px;height:11px;display:inline-block;"></div>
+            <div class="hm hm3" style="width:11px;height:11px;display:inline-block;"></div>
+            <div class="hm hm4" style="width:11px;height:11px;display:inline-block;"></div>
+            More
+          </div>
+        </div>
+
+        <!-- Weekly Volume Chart -->
+        <div class="g2">
+          <div class="card">
+            <div class="card-label" style="margin-bottom:12px;">📈 New Users — 12 Weeks</div>
+            <canvas class="chart" id="ov-users-chart" height="140"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-label" style="margin-bottom:12px;">💰 Revenue Trend — 12 Weeks</div>
+            <canvas class="chart" id="ov-rev-chart" height="140"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           PAGE: USERS
+      ══════════════════════════════ -->
+      <div class="page" id="page-users">
+        <div class="page-header">
+          <div class="page-eyebrow">Management</div>
+          <div class="page-title">USER CONTROL</div>
+          <div class="page-desc">View, search, filter, edit, suspend, and manage all registered athletes.</div>
+        </div>
+
+        <!-- Stats row -->
+        <div class="g5" style="margin-bottom:18px;" id="user-stat-cards"></div>
+
+        <!-- Toolbar -->
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+          <div class="search-bar" style="flex:1;min-width:200px;">
+            <input class="fi" type="text" id="usr-search" placeholder="Search name, email, ID…" oninput="filterUsers()">
+          </div>
+          <select class="fi" id="usr-plan" style="max-width:130px;" onchange="filterUsers()">
+            <option value="">All Plans</option>
+            <option value="pro">Pro</option>
+            <option value="free">Free</option>
+            <option value="trial">Trial</option>
+            <option value="team">Team</option>
+          </select>
+          <select class="fi" id="usr-status" style="max-width:140px;" onchange="filterUsers()">
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="suspended">Suspended</option>
+          </select>
+          <button class="btn btn-gold btn-sm" onclick="openModal('modal-add-user')">+ Add User</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportUsers()">↓ Export CSV</button>
+          <span style="font-family:var(--ff-mono);font-size:10px;color:var(--text-3);" id="usr-count">—</span>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="sort" onclick="sortUsers('name')">User ↕</th>
+                  <th>Plan</th>
+                  <th>Status</th>
+                  <th class="sort" onclick="sortUsers('sessions')">Sessions ↕</th>
+                  <th class="sort" onclick="sortUsers('joined')">Joined ↕</th>
+                  <th>Last Active</th>
+                  <th>Country</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="users-tbody"></tbody>
+            </table>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--edge);flex-wrap:wrap;gap:8px;">
+            <span style="font-family:var(--ff-mono);font-size:10px;color:var(--text-3);" id="usr-page-info">Page 1</span>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-ghost btn-xs" onclick="userPage(-1)">← Prev</button>
+              <button class="btn btn-ghost btn-xs" onclick="userPage(1)">Next →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           PAGE: LIVE SESSIONS
+      ══════════════════════════════ -->
+      <div class="page" id="page-sessions">
+        <div class="page-header">
+          <div class="page-eyebrow">Real-Time</div>
+          <div class="page-title">LIVE SESSIONS</div>
+          <div class="page-desc">Monitor active workout sessions, rep counts, and CV engine status in real-time.</div>
+        </div>
+        <div class="kpi-row" style="margin-bottom:16px;">
+          <div class="kpi-item mint"><div class="kpi-lbl">Active Now</div><div class="kpi-val mint" id="ls-active">12</div></div>
+          <div class="kpi-item gold"><div class="kpi-lbl">Reps This Hour</div><div class="kpi-val gold" id="ls-reps">8,241</div></div>
+          <div class="kpi-item cyan"><div class="kpi-lbl">Avg Form Score</div><div class="kpi-val cyan" id="ls-form">87%</div></div>
+          <div class="kpi-item blue"><div class="kpi-lbl">CV Inferences/s</div><div class="kpi-val blue" id="ls-inf">2,840</div></div>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>User</th><th>Exercise</th><th>Reps</th><th>Weight</th><th>Velocity</th><th>Form</th><th>Duration</th><th>Region</th><th>Action</th></tr></thead>
+              <tbody id="sessions-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           PAGE: ANALYTICS
+      ══════════════════════════════ -->
+      <div class="page" id="page-analytics">
+        <div class="page-header">
+          <div class="page-eyebrow">Insights</div>
+          <div class="page-title">ANALYTICS</div>
+          <div class="page-desc">Platform growth, engagement, and usage metrics.</div>
+        </div>
+        <div class="g2" style="margin-bottom:16px;">
+          <div class="card">
+            <div class="card-label" style="margin-bottom:12px;">📈 DAU / WAU — 12 Months</div>
+            <canvas class="chart" id="an-dau-chart" height="160"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-label" style="margin-bottom:12px;">🏋️ Most Tracked Lifts</div>
+            <div id="an-lifts"></div>
+          </div>
+        </div>
+        <div class="g3">
+          <div class="card">
+            <div class="card-label" style="margin-bottom:12px;">🌍 Users by Region</div>
+            <div id="an-regions"></div>
+          </div>
+          <div class="card">
+            <div class="card-label" style="margin-bottom:12px;">📱 Platform Split</div>
+            <canvas id="an-donut" width="110" height="110" style="display:block;margin:0 auto 12px;"></canvas>
+            <div id="an-donut-legend" style="display:flex;flex-direction:column;gap:7px;"></div>
+          </div>
+          <div class="card">
+            <div class="card-label" style="margin-bottom:12px;">⚡ Avg Session Metrics</div>
+            <div id="an-metrics"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           PAGE: REVENUE
+      ══════════════════════════════ -->
+      <div class="page" id="page-revenue">
+        <div class="page-header">
+          <div class="page-eyebrow">Financial</div>
+          <div class="page-title">REVENUE & PLANS</div>
+          <div class="page-desc">Subscription metrics, plan management, and transaction history.</div>
+        </div>
+        <div class="kpi-row" style="margin-bottom:16px;">
+          <div class="kpi-item gold"><div class="kpi-lbl">MRR</div><div class="kpi-val gold">$18,240</div><div class="kpi-delta up">↑ 7.3% MoM</div></div>
+          <div class="kpi-item blue"><div class="kpi-lbl">ARR</div><div class="kpi-val blue">$218K</div><div class="kpi-delta up">↑ Run-rate</div></div>
+          <div class="kpi-item rose"><div class="kpi-lbl">Churn</div><div class="kpi-val rose">2.4%</div><div class="kpi-delta dn">↑ +0.3% MoM</div></div>
+          <div class="kpi-item cyan"><div class="kpi-lbl">ARPU</div><div class="kpi-val cyan">$15.15</div><div class="kpi-delta up">↑ $1.20</div></div>
+          <div class="kpi-item mint"><div class="kpi-lbl">LTV</div><div class="kpi-val mint">$182</div><div class="kpi-delta up">↑ Improving</div></div>
+        </div>
+        <div class="g2" style="margin-bottom:16px;">
+          <div class="card">
+            <div class="card-label" style="margin-bottom:12px;">📆 Monthly Revenue — 12mo</div>
+            <canvas class="chart" id="rv-chart" height="160"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-label" style="margin-bottom:12px;">💳 Recent Transactions</div>
+            <div id="rv-txns" style="max-height:240px;overflow-y:auto;"></div>
+          </div>
+        </div>
+        <div class="g3">
+          <div class="plan-card">
+            <div class="plan-name">Free</div>
+            <div class="plan-price">$0<span style="font-family:var(--ff-mono);font-size:12px;color:var(--text-2);">/mo</span></div>
+            <ul class="plan-feats"><li>5 sessions/month</li><li>Rep counting only</li><li>7-day history</li><li>Community support</li></ul>
+            <button class="btn btn-ghost" style="width:100%;justify-content:center;" onclick="openModal('modal-edit-plan')">Edit Plan</button>
+          </div>
+          <div class="plan-card featured">
+            <div class="plan-tag">POPULAR</div>
+            <div class="plan-name">Pro</div>
+            <div class="plan-price">$14.99<span style="font-family:var(--ff-mono);font-size:12px;color:var(--text-2);">/mo</span></div>
+            <ul class="plan-feats"><li>Unlimited sessions</li><li>Full CV form analysis</li><li>Velocity tracking (VBT)</li><li>PR tracking + goals</li><li>Unlimited history</li><li>Priority support</li></ul>
+            <button class="btn btn-gold" style="width:100%;justify-content:center;" onclick="openModal('modal-edit-plan')">Edit Plan</button>
+          </div>
+          <div class="plan-card">
+            <div class="plan-name">Team</div>
+            <div class="plan-price">$49<span style="font-family:var(--ff-mono);font-size:12px;color:var(--text-2);">/mo</span></div>
+            <ul class="plan-feats"><li>Everything in Pro</li><li>Coach dashboard</li><li>10 athletes</li><li>CSV exports</li><li>API access</li><li>Dedicated support</li></ul>
+            <button class="btn btn-ghost" style="width:100%;justify-content:center;" onclick="openModal('modal-edit-plan')">Edit Plan</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           PAGE: CV ENGINE
+      ══════════════════════════════ -->
+      <div class="page" id="page-cv-engine">
+        <div class="page-header">
+          <div class="page-eyebrow">Machine Learning</div>
+          <div class="page-title">CV ENGINE</div>
+          <div class="page-desc">Model status, performance benchmarks, and inference configuration.</div>
+        </div>
+        <div class="g2" style="margin-bottom:16px;">
+          <div class="card">
+            <div class="card-label" style="margin-bottom:14px;">🤖 Model Fleet Status</div>
+            <div id="cv-models"></div>
+            <hr class="d">
+            <div class="card-label" style="margin-bottom:10px;">Today's Inference Stats</div>
+            <div class="g3" style="gap:10px;">
+              <div style="text-align:center;padding:10px;background:var(--lift2);border:1px solid var(--edge);border-radius:8px;"><div style="font-family:var(--ff-head);font-size:24px;color:var(--gold);">2.8M</div><div style="font-family:var(--ff-mono);font-size:8px;color:var(--text-3);">INFERENCES</div></div>
+              <div style="text-align:center;padding:10px;background:var(--lift2);border:1px solid var(--edge);border-radius:8px;"><div style="font-family:var(--ff-head);font-size:24px;color:var(--mint);">97.2%</div><div style="font-family:var(--ff-mono);font-size:8px;color:var(--text-3);">REP ACCURACY</div></div>
+              <div style="text-align:center;padding:10px;background:var(--lift2);border:1px solid var(--edge);border-radius:8px;"><div style="font-family:var(--ff-head);font-size:24px;color:var(--cyan);">28ms</div><div style="font-family:var(--ff-mono);font-size:8px;color:var(--text-3);">AVG LATENCY</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-label" style="margin-bottom:14px;">⚙ Engine Configuration</div>
+            <div class="fc"><label class="fl">Active Model</label>
+              <select class="fi"><option>MediaPipe BlazePose (Default)</option><option>TF MoveNet Lightning</option><option>TF MoveNet Thunder</option><option>OpenPose (CPU)</option></select>
+            </div>
+            <div class="fr2">
+              <div><label class="fl">Confidence Threshold</label><input class="fi" type="number" value="0.75" step="0.01" min="0.5" max="1"></div>
+              <div><label class="fl">Max FPS</label><input class="fi" type="number" value="30" min="10" max="60"></div>
+            </div>
+            <div class="fr2">
+              <div><label class="fl">Rep Angle (°)</label><input class="fi" type="number" value="90" min="60" max="140"></div>
+              <div><label class="fl">Smoothing (frames)</label><input class="fi" type="number" value="5" min="1" max="15"></div>
+            </div>
+            <div class="fc"><label class="fl">Velocity Algorithm</label>
+              <select class="fi"><option>Lucas-Kanade Optical Flow</option><option>Farnebäck Dense Flow</option><option>Keypoint Delta (Fast)</option></select>
+            </div>
+            <div class="fc"><label class="fl">GPU Acceleration</label>
+              <select class="fi"><option>WebGL (Browser)</option><option>WASM SIMD</option><option>CPU Fallback</option></select>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-gold btn-sm" onclick="toast('CV config saved!','🤖','var(--gold)')">Save Config</button>
+              <button class="btn btn-ghost btn-sm" onclick="toast('Benchmark queued…','⏱','var(--cyan)')">Run Benchmark</button>
+              <button class="btn btn-cyan btn-sm" onclick="toast('Models reloaded','↺','var(--cyan)')">Reload Models</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label" style="margin-bottom:12px;">📊 Model Accuracy Benchmark</div>
+          <canvas class="chart" id="cv-bench-chart" height="130"></canvas>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           PAGE: NOTIFICATIONS
+      ══════════════════════════════ -->
+      <div class="page" id="page-notifications">
+        <div class="page-header">
+          <div class="page-eyebrow">Alerts</div>
+          <div class="page-title">NOTIFICATIONS</div>
+          <div class="page-desc">System alerts, platform events, and broadcast messaging.</div>
+        </div>
+        <div class="g2">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+              <div class="card-label" style="margin:0;">🔔 System Alerts</div>
+              <button class="btn btn-ghost btn-sm" onclick="markAllRead()">Mark All Read</button>
+            </div>
+            <div id="notif-list"></div>
+          </div>
+          <div>
+            <div class="card" style="margin-bottom:14px;">
+              <div class="card-label" style="margin-bottom:14px;">📣 Broadcast Announcement</div>
+              <div class="fc"><label class="fl">Title</label><input class="fi" id="ann-title" placeholder="e.g. New Feature Release"></div>
+              <div class="fc"><label class="fl">Message</label><textarea class="fi" id="ann-body" placeholder="Announcement body…"></textarea></div>
+              <div class="fr2">
+                <div><label class="fl">Audience</label>
+                  <select class="fi" id="ann-audience"><option>All Users</option><option>Pro Users</option><option>Free Users</option><option>Trial Users</option></select>
+                </div>
+                <div><label class="fl">Channel</label>
+                  <select class="fi"><option>In-App Banner</option><option>Push Notification</option><option>Email</option><option>All Channels</option></select>
+                </div>
+              </div>
+              <button class="btn btn-gold" onclick="sendAnnouncement()">📣 Send Announcement</button>
+            </div>
+            <div class="card">
+              <div class="card-label" style="margin-bottom:12px;">⚠ Alert Thresholds</div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <div class="ff-row"><div class="ff-info"><div class="ff-name">Alert on >5% error rate</div></div><label class="sw"><input type="checkbox" checked><div class="sw-track"></div></label></div>
+                <div class="ff-row"><div class="ff-info"><div class="ff-name">Alert on API latency >200ms</div></div><label class="sw"><input type="checkbox" checked><div class="sw-track"></div></label></div>
+                <div class="ff-row"><div class="ff-info"><div class="ff-name">Alert on churn spike >3%</div></div><label class="sw"><input type="checkbox"><div class="sw-track"></div></label></div>
+                <div class="ff-row"><div class="ff-info"><div class="ff-name">Daily digest email</div></div><label class="sw"><input type="checkbox" checked><div class="sw-track"></div></label></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           PAGE: API LOGS
+      ══════════════════════════════ -->
+      <div class="page" id="page-api-logs">
+        <div class="page-header">
+          <div class="page-eyebrow">Monitoring</div>
+          <div class="page-title">API LOGS</div>
+          <div class="page-desc">Request logs, error rates, and endpoint performance monitoring.</div>
+        </div>
+        <div class="kpi-row" style="margin-bottom:14px;">
+          <div class="kpi-item mint"><div class="kpi-lbl">Requests Today</div><div class="kpi-val mint">284K</div></div>
+          <div class="kpi-item gold"><div class="kpi-lbl">Avg Latency</div><div class="kpi-val gold">42ms</div></div>
+          <div class="kpi-item rose"><div class="kpi-lbl">Error Rate</div><div class="kpi-val rose">0.8%</div></div>
+          <div class="kpi-item cyan"><div class="kpi-lbl">Uptime</div><div class="kpi-val cyan">99.98%</div></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+          <input class="fi" type="text" placeholder="Filter by path, IP, user…" style="flex:1;min-width:180px;" oninput="filterLogs(this.value)">
+          <select class="fi" id="log-method" style="max-width:110px;" onchange="filterLogs()"><option value="">All Methods</option><option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option></select>
+          <select class="fi" id="log-status" style="max-width:130px;" onchange="filterLogs()"><option value="">All Status</option><option value="2">2xx Success</option><option value="4">4xx Error</option><option value="5">5xx Error</option></select>
+          <button class="btn btn-ghost btn-sm" onclick="refreshLogs()">↺ Refresh</button>
+          <button class="btn btn-ghost btn-sm" onclick="toast('Exported 500 entries','↓','var(--mint)')">↓ Export</button>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div style="display:grid;grid-template-columns:90px 62px 1fr 90px 70px;gap:14px;padding:9px 14px;background:var(--lift2);border-bottom:1px solid var(--edge);">
+            <span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);">Time</span>
+            <span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);">Method</span>
+            <span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);">Endpoint</span>
+            <span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);">IP</span>
+            <span style="font-family:var(--ff-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-3);text-align:right;">Status</span>
+          </div>
+          <div style="max-height:400px;overflow-y:auto;" id="log-list"></div>
+        </div>
+        <div style="font-family:var(--ff-mono);font-size:10px;color:var(--text-3);margin-top:10px;text-align:center;">Showing last 50 of <span style="color:var(--gold)">284,192</span> requests today</div>
+      </div>
+
+      <!-- ══════════════════════════════
+           PAGE: PERMISSIONS
+      ══════════════════════════════ -->
+      <div class="page" id="page-permissions">
+        <div class="page-header">
+          <div class="page-eyebrow">Access Control</div>
+          <div class="page-title">PERMISSIONS</div>
+          <div class="page-desc">Feature flags, admin roles, and plan-level capability management.</div>
+        </div>
+        <div class="g2">
+          <div class="card">
+            <div class="card-label" style="margin-bottom:14px;">🏴 Feature Flags</div>
+            <div id="feature-flags"></div>
+          </div>
+          <div>
+            <div class="card" style="margin-bottom:14px;">
+              <div class="card-label" style="margin-bottom:14px;">👮 Admin Team</div>
+              <div id="admin-team"></div>
+              <button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="openModal('modal-add-user')">+ Invite Admin</button>
+            </div>
+            <div class="card">
+              <div class="card-label" style="margin-bottom:12px;">🛡 Plan Capabilities</div>
+              <div id="plan-caps"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           PAGE: SETTINGS
+      ══════════════════════════════ -->
+      <div class="page" id="page-settings">
+        <div class="page-header">
+          <div class="page-eyebrow">Configuration</div>
+          <div class="page-title">SYSTEM SETTINGS</div>
+          <div class="page-desc">Global platform configuration and admin account management.</div>
+        </div>
+        <div class="g2">
+          <div class="card">
+            <div class="card-label" style="margin-bottom:16px;">👤 Admin Profile</div>
+            <div class="fr2">
+              <div><label class="fl">First Name</label><input class="fi" id="set-fname" value="Sahra"></div>
+              <div><label class="fl">Last Name</label><input class="fi" id="set-lname" value="Reyes"></div>
+            </div>
+            <div class="fc"><label class="fl">Email</label><input class="fi" value="sahra@logiclift.io"></div>
+            <div class="fc"><label class="fl">Role</label><select class="fi"><option>Superadmin</option><option>Admin</option><option>Editor</option></select></div>
+            <div class="fr2">
+              <div><label class="fl">New Password</label><input class="fi" type="password" placeholder="Leave blank to keep"></div>
+              <div><label class="fl">Confirm Password</label><input class="fi" type="password" placeholder="Confirm new password"></div>
+            </div>
+            <button class="btn btn-gold btn-sm" onclick="saveProfile()">Save Profile</button>
+          </div>
+          <div class="card">
+            <div class="card-label" style="margin-bottom:16px;">🌐 Platform Settings</div>
+            <div class="fc"><label class="fl">Platform Name</label><input class="fi" value="LogicLift"></div>
+            <div class="fc"><label class="fl">Support Email</label><input class="fi" value="support@logiclift.io"></div>
+            <div class="fr2">
+              <div><label class="fl">Default Plan</label><select class="fi"><option>Free</option><option>Trial</option></select></div>
+              <div><label class="fl">Trial Duration (days)</label><input class="fi" type="number" value="14"></div>
+            </div>
+            <div class="fc"><label class="fl">Maintenance Mode</label>
+              <div class="ff-row" style="margin-top:4px;"><div class="ff-info"><div class="ff-name">Enable Maintenance Page</div><div class="ff-desc">Blocks all non-admin access</div></div><label class="sw"><input type="checkbox"><div class="sw-track"></div></label></div>
+            </div>
+            <button class="btn btn-gold btn-sm" onclick="toast('Platform settings saved!','⚙️','var(--gold)')">Save Settings</button>
+          </div>
+          <div class="card">
+            <div class="card-label" style="margin-bottom:16px;">🔧 Tech Stack</div>
+            <div style="font-family:var(--ff-mono);font-size:11px;line-height:2.2;color:var(--text-2);">
+              <div><span style="color:var(--gold);">Frontend</span> · React Native / Flutter</div>
+              <div><span style="color:var(--gold);">CV Engine</span> · MediaPipe BlazePose</div>
+              <div><span style="color:var(--gold);">ML Runtime</span> · TensorFlow Lite</div>
+              <div><span style="color:var(--gold);">Backend</span> · Python FastAPI</div>
+              <div><span style="color:var(--gold);">Database</span> · PostgreSQL + Redis</div>
+              <div><span style="color:var(--gold);">CDN</span> · Cloudflare</div>
+              <div><span style="color:var(--gold);">Payments</span> · Stripe</div>
+              <hr class="d">
+              <div style="color:var(--text-3);font-size:9px;">v2.0.0 · LogicLift Admin Portal</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-label" style="margin-bottom:16px;">⚠ Danger Zone</div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div style="padding:14px;border:1px solid rgba(255,68,102,.25);border-radius:9px;">
+                <div style="font-size:13px;font-weight:500;margin-bottom:4px;">Clear All Session Logs</div>
+                <div style="font-family:var(--ff-mono);font-size:10px;color:var(--text-2);margin-bottom:10px;">Permanently delete all API and workout session logs.</div>
+                <button class="btn btn-rose btn-sm" onclick="confirmAction('Clear all session logs?','This action cannot be undone.', ()=>toast('Logs cleared','🗑','var(--rose)'))">Clear Logs</button>
+              </div>
+              <div style="padding:14px;border:1px solid rgba(255,68,102,.25);border-radius:9px;">
+                <div style="font-size:13px;font-weight:500;margin-bottom:4px;">Reset All Feature Flags</div>
+                <div style="font-family:var(--ff-mono);font-size:10px;color:var(--text-2);margin-bottom:10px;">Reset all feature flags to their default values.</div>
+                <button class="btn btn-rose btn-sm" onclick="confirmAction('Reset all feature flags?','All custom flags will revert to defaults.',()=>toast('Flags reset','↺','var(--gold)'))">Reset Flags</button>
+              </div>
+              <div style="padding:14px;border:1px solid rgba(255,68,102,.25);border-radius:9px;">
+                <div style="font-size:13px;font-weight:500;margin-bottom:4px;">Force Logout All Users</div>
+                <div style="font-family:var(--ff-mono);font-size:10px;color:var(--text-2);margin-bottom:10px;">Invalidate all active sessions platform-wide.</div>
+                <button class="btn btn-rose btn-sm" onclick="confirmAction('Force logout all users?','All active sessions will be terminated immediately.',()=>toast('All sessions terminated','⚠','var(--rose)'))">Force Logout All</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Add User Modal -->
+<div class="modal-overlay" id="modal-add-user">
+  <div class="modal">
+    <div class="modal-title">+ Add User</div>
+    <button class="modal-close" onclick="closeModal('modal-add-user')">✕</button>
+    <div class="fr2">
+      <div><label class="fl">First Name</label><input class="fi" id="au-fn" placeholder="Alex"></div>
+      <div><label class="fl">Last Name</label><input class="fi" id="au-ln" placeholder="Rivera"></div>
+    </div>
+    <div class="fc"><label class="fl">Email</label><input class="fi" id="au-em" placeholder="alex@example.com" type="email"></div>
+    <div class="fr2">
+      <div><label class="fl">Plan</label><select class="fi" id="au-plan"><option>Free</option><option>Trial</option><option>Pro</option><option>Team</option></select></div>
+      <div><label class="fl">Role</label><select class="fi" id="au-role"><option>User</option><option>Support</option><option>Editor</option><option>Admin</option></select></div>
+    </div>
+    <div class="fr2">
+      <div><label class="fl">Country</label><select class="fi" id="au-country"><option>🇺🇸 US</option><option>🇬🇧 UK</option><option>🇩🇪 DE</option><option>🇯🇵 JP</option><option>🇧🇷 BR</option><option>🇵🇭 PH</option></select></div>
+      <div><label class="fl">Temp Password</label><input class="fi" id="au-pw" type="password" placeholder="Min 8 chars"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:6px;">
+      <button class="btn btn-gold" onclick="addUser()">Create User</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-user')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Plan Modal -->
+<div class="modal-overlay" id="modal-edit-plan">
+  <div class="modal">
+    <div class="modal-title">Edit Plan</div>
+    <button class="modal-close" onclick="closeModal('modal-edit-plan')">✕</button>
+    <div class="fr2">
+      <div><label class="fl">Plan Name</label><input class="fi" value="Pro"></div>
+      <div><label class="fl">Monthly Price ($)</label><input class="fi" type="number" value="14.99" step="0.01"></div>
+    </div>
+    <div class="fr2">
+      <div><label class="fl">Sessions/Month</label><input class="fi" type="number" value="0" placeholder="0 = unlimited"></div>
+      <div><label class="fl">History (days)</label><input class="fi" type="number" value="0" placeholder="0 = unlimited"></div>
+    </div>
+    <div class="fc"><label class="fl">Features (one per line)</label><textarea class="fi" rows="5">Unlimited sessions
+Full CV form analysis
+Velocity tracking (VBT)
+PR tracking + goals
+Priority support</textarea></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-gold" onclick="closeModal('modal-edit-plan');toast('Plan updated!','💰','var(--gold)')">Save Plan</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-plan')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- User Detail Drawer -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="user-drawer">
+  <div class="drawer-close" onclick="closeDrawer()">✕</div>
+  <div id="drawer-content"></div>
+</div>
+
+<!-- Confirm Dialog -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <h3 id="confirm-title">Are you sure?</h3>
+    <p id="confirm-msg">This action cannot be undone.</p>
+    <div class="confirm-actions">
+      <button class="btn btn-rose" id="confirm-yes" onclick="doConfirm()">Confirm</button>
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span id="toast-icon" style="font-size:14px;"></span>
+  <span id="toast-msg"></span>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════ -->
+<script>
+'use strict';
+
+/* ─── UTILS ─── */
+const $ = id => document.getElementById(id);
+const qs = sel => document.querySelector(sel);
+const qsa = sel => document.querySelectorAll(sel);
+
+function toast(msg, icon='✓', color='var(--mint)') {
+  const t = $('toast');
+  $('toast-msg').textContent = msg;
+  $('toast-icon').textContent = icon;
+  $('toast-icon').style.color = color;
+  t.classList.add('show');
+  clearTimeout(t._to);
+  t._to = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+function openModal(id) { $(id).classList.add('open'); }
+function closeModal(id) { $(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m =>
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); })
+);
+
+let _confirmCb = null;
+function confirmAction(title, msg, cb) {
+  $('confirm-title').textContent = title;
+  $('confirm-msg').textContent = msg;
+  _confirmCb = cb;
+  $('confirm-overlay').classList.add('open');
+}
+function doConfirm() {
+  $('confirm-overlay').classList.remove('open');
+  if (_confirmCb) { _confirmCb(); _confirmCb = null; }
+}
+function closeConfirm() {
+  $('confirm-overlay').classList.remove('open');
+  _confirmCb = null;
+}
+
+/* ─── LOGOUT ─── */
+function logout() {
+  confirmAction(
+    'Log out?',
+    'You will be returned to the sign-in page.',
+    () => { window.location.href = 'index.html'; }
+  );
+}
+
+/* ─── SIDEBAR ─── */
+let sidebarCollapsed = false;
+function toggleSidebar() {
+  sidebarCollapsed = !sidebarCollapsed;
+  $('sidebar').classList.toggle('collapsed', sidebarCollapsed);
+  $('main-area').classList.toggle('expanded', sidebarCollapsed);
+}
+
+/* ─── CLOCK ─── */
+function updateClock() {
+  const now = new Date();
+  $('clock').textContent = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+setInterval(updateClock, 1000); updateClock();
+
+/* ─── NAVIGATION ─── */
+const PAGE_MAP = {
+  overview:'overview', users:'users', sessions:'sessions',
+  analytics:'analytics', revenue:'revenue', 'cv-engine':'cv-engine',
+  notifications:'notifications', 'api-logs':'api-logs',
+  permissions:'permissions', settings:'settings'
+};
+const PAGE_INITS = {};
+let currentPage = 'overview';
+
+function nav(id, el) {
+  if (!el) el = qs(`[onclick*="'${id}'"]`);
+  qsa('.page').forEach(p => p.classList.remove('active'));
+  qsa('.nav-item').forEach(n => n.classList.remove('active'));
+  const page = $('page-' + id);
+  if (page) page.classList.add('active');
+  if (el && el.classList) el.classList.add('active');
+  currentPage = id;
+  $('topbar-title').innerHTML = `Logic<span style="color:var(--gold)">Lift</span> · ${id.replace('-',' ').toUpperCase()}`;
+  if (!PAGE_INITS[id]) { PAGE_INITS[id] = true; initPage(id); }
+}
+
+function initPage(id) {
+  const fn = {
+    overview: initOverview,
+    users: initUsers,
+    sessions: initSessions,
+    analytics: initAnalytics,
+    revenue: initRevenue,
+    'cv-engine': initCVEngine,
+    notifications: initNotifications,
+    'api-logs': initLogs,
+    permissions: initPermissions,
+  }[id];
+  if (fn) setTimeout(fn, 50);
+}
+
+/* ─── DATA STORE ─── */
+const USERS = [
+  {id:'U001',name:'Alex Rivera',    email:'alex@gym.io',          plan:'pro',  status:'active',  sessions:142, joined:'2024-01-12', last:'2h ago',  country:'🇺🇸', av:'AR', avc:'av-gold'},
+  {id:'U002',name:'Jin Park',       email:'jin.park@fitness.kr',  plan:'pro',  status:'active',  sessions:98,  joined:'2024-02-03', last:'5m ago',  country:'🇰🇷', av:'JP', avc:'av-cyan'},
+  {id:'U003',name:'Sarah Müller',   email:'sarah.m@sport.de',     plan:'free', status:'active',  sessions:34,  joined:'2024-03-01', last:'1d ago',  country:'🇩🇪', av:'SM', avc:'av-mint'},
+  {id:'U004',name:'Marco Lima',     email:'marco@crossfit.br',    plan:'trial',status:'active',  sessions:8,   joined:'2024-03-08', last:'3h ago',  country:'🇧🇷', av:'ML', avc:'av-blue'},
+  {id:'U005',name:'Yuki Tanaka',    email:'yuki.t@lift.jp',       plan:'pro',  status:'active',  sessions:204, joined:'2023-11-05', last:'12m ago', country:'🇯🇵', av:'YT', avc:'av-purple'},
+  {id:'U006',name:'Brie Okafor',    email:'brie@strength.ng',     plan:'free', status:'suspended',sessions:12, joined:'2023-12-20', last:'30d ago', country:'🇳🇬', av:'BO', avc:'av-rose'},
+  {id:'U007',name:'Carlos Vega',    email:'carlos@iron.mx',       plan:'pro',  status:'active',  sessions:87,  joined:'2023-10-14', last:'6h ago',  country:'🇲🇽', av:'CV', avc:'av-gold'},
+  {id:'U008',name:'Emma Walsh',     email:'emma@barbell.uk',      plan:'free', status:'inactive',sessions:5,   joined:'2024-03-10', last:'7d ago',  country:'🇬🇧', av:'EW', avc:'av-cyan'},
+  {id:'U009',name:'Priya Sharma',   email:'priya@lifts.in',       plan:'pro',  status:'active',  sessions:56,  joined:'2024-01-28', last:'1h ago',  country:'🇮🇳', av:'PS', avc:'av-mint'},
+  {id:'U010',name:'Luca Ferrari',   email:'luca@power.it',        plan:'team', status:'active',  sessions:310, joined:'2023-09-02', last:'30m ago', country:'🇮🇹', av:'LF', avc:'av-blue'},
+  {id:'U011',name:'Ana Souza',      email:'ana@forte.br',         plan:'free', status:'active',  sessions:21,  joined:'2024-02-15', last:'4d ago',  country:'🇧🇷', av:'AS', avc:'av-purple'},
+  {id:'U012',name:'Jake Thompson',  email:'jake@squat.us',        plan:'trial',status:'active',  sessions:14,  joined:'2024-03-05', last:'2d ago',  country:'🇺🇸', av:'JT', avc:'av-gold'},
+];
+
+// Load users registered via the sign-in page
+(function loadRegisteredUsers() {
+  try {
+    const registered = JSON.parse(localStorage.getItem('ll_registered_users') || '[]');
+    const existingIds = new Set(USERS.map(u => u.id));
+    registered.forEach(u => {
+      if (!existingIds.has(u.id)) { USERS.unshift(u); existingIds.add(u.id); }
+    });
+  } catch(e) {}
+})();
+
+/* ─── OVERVIEW ─── */
+function initOverview() {
+  buildHealthBars();
+  buildHeatmap();
+  buildLiveFeed();
+  drawLineChart('ov-users-chart', [120,145,132,158,170,165,188,201,195,218,230,218], 'Users', '#f0a500', 140);
+  drawLineChart('ov-rev-chart', [10400,11200,10800,12100,12900,13400,14200,14800,15600,16400,17200,18240], 'Revenue', '#00d4c8', 140);
+}
+
+const HEALTH_DATA = [
+  {name:'API Server (FastAPI)', pct:99.98, color:'var(--mint)'},
+  {name:'CV Engine (MediaPipe)', pct:98.3,  color:'var(--mint)'},
+  {name:'PostgreSQL Database',   pct:100,   color:'var(--mint)'},
+  {name:'Redis Cache',           pct:94.1,  color:'var(--gold)', warn:true},
+  {name:'CDN (Cloudflare)',      pct:100,   color:'var(--mint)'},
+];
+
+function buildHealthBars() {
+  const el = $('health-bars');
+  if (!el) return;
+  el.innerHTML = '';
+  HEALTH_DATA.forEach(h => {
+    el.innerHTML += `
+      <div class="srv-metric">
+        <div class="srv-metric-top">
+          <span style="color:var(--text-2)">${h.name}</span>
+          <span style="color:${h.color}">${h.pct}%${h.warn?' ⚠':''}</span>
+        </div>
+        <div class="prog"><div class="prog-fill" style="width:${h.pct}%;background:${h.color};"></div></div>
+      </div>`;
+  });
+  // Update sys indicator
+  const hasWarn = HEALTH_DATA.some(h => h.warn);
+  $('sys-dot').className = 'sys-dot ' + (hasWarn ? 'warn' : 'ok');
+  $('sys-label').textContent = hasWarn ? 'Degraded Performance' : 'All Systems Operational';
+}
+
+function buildHeatmap() {
+  const el = $('heatmap');
+  if (!el) return;
+  el.innerHTML = '';
+  for (let i = 0; i < 371; i++) {
+    const d = document.createElement('div');
+    const r = Math.random();
+    const lvl = r < 0.28 ? 0 : r < 0.5 ? 1 : r < 0.7 ? 2 : r < 0.88 ? 3 : 4;
+    d.className = `hm hm${lvl}`;
+    d.title = `${['0','1–2','3–4','5–7','8+'][lvl]} sessions`;
+    el.appendChild(d);
+  }
+}
+
+const FEED_MSGS = [
+  {icon:'🏋️', bg:'rgba(240,165,0,.1)', msg:'<strong>alex_r</strong> completed Back Squat 5×5 · 110kg'},
+  {icon:'🏆', bg:'rgba(240,165,0,.15)', msg:'<strong>yuki.t</strong> hit a new PR — Deadlift 182.5kg'},
+  {icon:'👤', bg:'rgba(45,255,176,.08)', msg:'New user registered · <strong>marco.fitness@gmail.com</strong>'},
+  {icon:'💳', bg:'rgba(0,212,200,.08)', msg:'<strong>sarah_m</strong> upgraded to Pro · $14.99/mo'},
+  {icon:'⚠', bg:'rgba(255,68,102,.08)', msg:'Form alert — <strong>user_4821</strong> — knee valgus detected'},
+  {icon:'🤖', bg:'rgba(240,165,0,.06)', msg:'CV Engine switched to BlazePose Lite — CPU threshold hit'},
+  {icon:'💳', bg:'rgba(255,68,102,.08)', msg:'Payment failed · <strong>user_3392</strong> — card declined'},
+  {icon:'📊', bg:'rgba(45,255,176,.08)', msg:'Weekly report generated — 2,394 sessions this week'},
+  {icon:'🔐', bg:'rgba(240,165,0,.06)', msg:'Admin login · <strong>marco@logiclift.io</strong> from 203.0.113.42'},
+  {icon:'🎯', bg:'rgba(0,212,200,.08)', msg:'<strong>luca_f</strong> hit 300 sessions milestone'},
+];
+let feedIdx = 0;
+function buildLiveFeed() {
+  const el = $('live-feed');
+  if (!el) return;
+  el.innerHTML = '';
+  FEED_MSGS.forEach((m, i) => appendFeedItem(el, m, i === 0 ? 'just now' : `${i*2}m ago`));
+}
+function appendFeedItem(el, m, time) {
+  const div = document.createElement('div');
+  div.className = 'activity-row';
+  div.innerHTML = `
+    <div class="act-icon-wrap" style="background:${m.bg}">${m.icon}</div>
+    <div class="act-body">${m.msg}</div>
+    <div class="act-time">${time}</div>`;
+  el.insertBefore(div, el.firstChild);
+  if (el.children.length > 12) el.removeChild(el.lastChild);
+}
+
+setInterval(() => {
+  const el = $('live-feed');
+  if (!el) return;
+  feedIdx = (feedIdx + 1) % FEED_MSGS.length;
+  appendFeedItem(el, FEED_MSGS[feedIdx], 'just now');
+  // Pulse KPI
+  const val = parseInt($('kpi-sess').textContent.replace(',','')) + Math.floor(Math.random()*3);
+  $('kpi-sess').textContent = val.toLocaleString();
+}, 3800);
+
+/* ─── USERS ─── */
+let usersFiltered = [...USERS];
+let userSortKey = null, userSortDir = 1, userPageNum = 1;
+const USER_PER_PAGE = 8;
+
+function initUsers() {
+  // Stat cards
+  const sc = $('user-stat-cards');
+  if (sc) {
+    const stats = [
+      {label:'Total', val:USERS.length + 4809, color:'gold'},
+      {label:'Pro', val:USERS.filter(u=>u.plan==='pro').length + 1200, color:'cyan'},
+      {label:'Free', val:USERS.filter(u=>u.plan==='free').length + 3388, color:'blue'},
+      {label:'Trial', val:USERS.filter(u=>u.plan==='trial').length + 2, color:'mint'},
+      {label:'Suspended', val:USERS.filter(u=>u.status==='suspended').length + 224, color:'rose'},
+    ];
+    sc.innerHTML = stats.map(s => `
+      <div class="kpi-item ${s.color}">
+        <div class="kpi-lbl">${s.label}</div>
+        <div class="kpi-val ${s.color}">${s.val.toLocaleString()}</div>
+      </div>`).join('');
+  }
+  renderUsers();
+}
+
+function filterUsers() {
+  const q = ($('usr-search')?.value || '').toLowerCase();
+  const plan = $('usr-plan')?.value || '';
+  const status = $('usr-status')?.value || '';
+  usersFiltered = USERS.filter(u => {
+    const mq = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.id.toLowerCase().includes(q);
+    const mp = !plan || u.plan === plan;
+    const ms = !status || u.status === status;
+    return mq && mp && ms;
+  });
+  userPageNum = 1;
+  renderUsers();
+}
+
+function sortUsers(key) {
+  if (userSortKey === key) userSortDir *= -1;
+  else { userSortKey = key; userSortDir = 1; }
+  usersFiltered.sort((a,b) => {
+    let av = a[key], bv = b[key];
+    if (typeof av === 'string') return av.localeCompare(bv) * userSortDir;
+    return (av - bv) * userSortDir;
+  });
+  renderUsers();
+}
+
+function userPage(dir) {
+  const maxP = Math.ceil(usersFiltered.length / USER_PER_PAGE);
+  userPageNum = Math.max(1, Math.min(maxP, userPageNum + dir));
+  renderUsers();
+}
+
+function renderUsers() {
+  const tbody = $('users-tbody');
+  if (!tbody) return;
+  const start = (userPageNum - 1) * USER_PER_PAGE;
+  const page = usersFiltered.slice(start, start + USER_PER_PAGE);
+  $('usr-count').textContent = `${usersFiltered.length} users found`;
+  $('usr-page-info').textContent = `Page ${userPageNum} of ${Math.max(1, Math.ceil(usersFiltered.length / USER_PER_PAGE))} (showing ${page.length})`;
+  tbody.innerHTML = '';
+  page.forEach(u => {
+    const planClass = {pro:'pill-gold', free:'pill-dim', trial:'pill-cyan', team:'pill-blue'}[u.plan] || 'pill-dim';
+    const statusClass = {active:'pill-mint', inactive:'pill-dim', suspended:'pill-rose'}[u.status] || 'pill-dim';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="avatar ${u.avc}">${u.av}</div>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);">${u.name}</div>
+            <div style="font-family:var(--ff-mono);font-size:9px;color:var(--text-3);">${u.email}</div>
+          </div>
+        </div>
+      </td>
+      <td><span class="pill ${planClass}">${u.plan.toUpperCase()}</span></td>
+      <td><span class="pill ${statusClass}"><span class="pill-dot"></span>${u.status}</span></td>
+      <td style="font-family:var(--ff-mono);color:var(--gold);font-weight:600;">${u.sessions}</td>
+      <td style="font-family:var(--ff-mono);font-size:10px;">${u.joined}</td>
+      <td style="font-family:var(--ff-mono);font-size:10px;">${u.last}</td>
+      <td>${u.country}</td>
+      <td>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-xs" onclick="viewUser('${u.id}')">View</button>
+          <button class="btn btn-ghost btn-xs" onclick="editUser('${u.id}')">Edit</button>
+          <button class="btn btn-xs" style="background:transparent;border:1px solid rgba(0,212,200,.3);color:var(--cyan);border-radius:5px;padding:4px 9px;font-family:var(--ff-mono);font-size:8px;font-weight:600;text-transform:uppercase;cursor:pointer;" onclick="resetPw('${u.id}')">PW</button>
+          <button class="btn btn-xs ${u.status==='suspended'?'btn-cyan':'btn-rose'}" onclick="toggleSuspend('${u.id}')">${u.status==='suspended'?'Restore':'Suspend'}</button>
+          <button class="btn btn-rose btn-xs" onclick="deleteUser('${u.id}')">Delete</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function viewUser(id) {
+  const u = USERS.find(x => x.id === id);
+  if (!u) return;
+  $('drawer-content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px;margin-top:8px;">
+      <div class="avatar ${u.avc}" style="width:52px;height:52px;font-size:22px;border-radius:12px;">${u.av}</div>
+      <div>
+        <div style="font-family:var(--ff-head);font-size:22px;letter-spacing:.5px;">${u.name}</div>
+        <div style="font-family:var(--ff-mono);font-size:10px;color:var(--text-2);">${u.email}</div>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <span class="pill ${{pro:'pill-gold',free:'pill-dim',trial:'pill-cyan',team:'pill-blue'}[u.plan]}">${u.plan.toUpperCase()}</span>
+          <span class="pill ${{active:'pill-mint',inactive:'pill-dim',suspended:'pill-rose'}[u.status]}"><span class="pill-dot"></span>${u.status}</span>
+        </div>
+      </div>
+    </div>
+    <hr class="d">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+      ${[['User ID', u.id],['Country', u.country],['Sessions', u.sessions],['Joined', u.joined],['Last Active', u.last],['Role', 'Athlete']].map(([l,v]) => `
+        <div style="padding:10px;background:var(--lift2);border:1px solid var(--edge);border-radius:8px;">
+          <div style="font-family:var(--ff-mono);font-size:9px;color:var(--text-3);margin-bottom:3px;">${l}</div>
+          <div style="font-size:13px;font-weight:500;">${v}</div>
+        </div>`).join('')}
+    </div>
+    <hr class="d">
+    <div style="font-family:var(--ff-mono);font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px;">Recent Activity</div>
+    ${['Completed Deadlift 3×5 · 150kg','Hit PR — Bench Press 102.5kg × 1','Form alert: back rounding on squat','Session completed · 58min · 18 sets'].map(a => `
+      <div style="font-size:11px;color:var(--text-2);padding:7px 0;border-bottom:1px solid var(--edge);">🏋️ ${a}</div>`).join('')}
+    <div style="display:flex;gap:8px;margin-top:20px;flex-wrap:wrap;">
+      <button class="btn btn-gold btn-sm" onclick="toast('Email sent to ${u.name}','✉','var(--gold)')">Send Email</button>
+      <button class="btn btn-ghost btn-sm" onclick="editUser('${u.id}');closeDrawer()">Edit Profile</button>
+      <button class="btn btn-rose btn-sm" onclick="toggleSuspend('${u.id}');closeDrawer()">${u.status==='suspended'?'Restore':'Suspend'}</button>
+    </div>
+  `;
+  openDrawer();
+}
+
+function editUser(id) {
+  const u = USERS.find(x => x.id === id);
+  if (!u) return;
+  $('drawer-content').innerHTML = `
+    <div style="font-family:var(--ff-head);font-size:22px;letter-spacing:.5px;margin-bottom:20px;margin-top:8px;">Edit: ${u.name}</div>
+    <div class="fc"><label class="fl">Name</label><input class="fi" value="${u.name}" id="eu-name"></div>
+    <div class="fc"><label class="fl">Email</label><input class="fi" value="${u.email}" id="eu-email"></div>
+    <div class="fr2">
+      <div><label class="fl">Plan</label><select class="fi" id="eu-plan"><option ${u.plan==='free'?'selected':''}>Free</option><option ${u.plan==='trial'?'selected':''}>Trial</option><option ${u.plan==='pro'?'selected':''}>Pro</option><option ${u.plan==='team'?'selected':''}>Team</option></select></div>
+      <div><label class="fl">Status</label><select class="fi" id="eu-status"><option ${u.status==='active'?'selected':''}>active</option><option ${u.status==='inactive'?'selected':''}>inactive</option><option ${u.status==='suspended'?'selected':''}>suspended</option></select></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:6px;">
+      <button class="btn btn-gold" onclick="saveEdit('${u.id}')">Save Changes</button>
+      <button class="btn btn-ghost" onclick="closeDrawer()">Cancel</button>
+    </div>
+  `;
+  openDrawer();
+}
+
+function saveEdit(id) {
+  const u = USERS.find(x => x.id === id);
+  if (!u) return;
+  u.name  = $('eu-name')?.value || u.name;
+  u.email = $('eu-email')?.value || u.email;
+  u.plan  = ($('eu-plan')?.value || u.plan).toLowerCase();
+  u.status= ($('eu-status')?.value || u.status).toLowerCase();
+  closeDrawer();
+  filterUsers();
+  toast(`${u.name} updated!`, '✓', 'var(--mint)');
+}
+
+function resetPw(id) {
+  const u = USERS.find(x => x.id === id);
+  confirmAction(`Reset password for ${u?.name}?`, 'A temporary password will be emailed to the user.', () => {
+    toast(`Password reset email sent to ${u?.email}`, '🔑', 'var(--cyan)');
+  });
+}
+
+function toggleSuspend(id) {
+  const u = USERS.find(x => x.id === id);
+  if (!u) return;
+  const action = u.status === 'suspended' ? 'restore' : 'suspend';
+  confirmAction(`${action.charAt(0).toUpperCase()+action.slice(1)} ${u.name}?`, `Their account will be ${action}d immediately.`, () => {
+    u.status = u.status === 'suspended' ? 'active' : 'suspended';
+    filterUsers();
+    toast(`${u.name} ${action}d`, '⚠', action === 'suspend' ? 'var(--rose)' : 'var(--mint)');
+  });
+}
+
+function deleteUser(id) {
+  const u = USERS.find(x => x.id === id);
+  confirmAction(`Delete ${u?.name}?`, 'This permanently removes all their data and cannot be undone.', () => {
+    const idx = USERS.findIndex(x => x.id === id);
+    if (idx > -1) USERS.splice(idx, 1);
+    filterUsers();
+    toast(`${u?.name} deleted`, '🗑', 'var(--rose)');
+  });
+}
+
+function addUser() {
+  const fn = $('au-fn').value.trim();
+  const ln = $('au-ln').value.trim();
+  const em = $('au-em').value.trim();
+  if (!fn || !em) { toast('Name and email required', '⚠', 'var(--gold)'); return; }
+  const avatarColors = ['av-gold','av-cyan','av-mint','av-blue','av-purple','av-rose'];
+  const newUser = {
+    id: 'U' + (USERS.length + 1).toString().padStart(3,'0'),
+    name: `${fn} ${ln}`,
+    email: em,
+    plan: $('au-plan').value.toLowerCase(),
+    status: 'active',
+    sessions: 0,
+    joined: new Date().toISOString().slice(0,10),
+    last: 'just now',
+    country: $('au-country').value.slice(0,2),
+    av: (fn[0]+(ln[0]||'')).toUpperCase(),
+    avc: avatarColors[Math.floor(Math.random()*avatarColors.length)],
+  };
+  USERS.unshift(newUser);
+  try {
+    const stored = JSON.parse(localStorage.getItem('ll_registered_users') || '[]');
+    stored.unshift(newUser);
+    localStorage.setItem('ll_registered_users', JSON.stringify(stored));
+  } catch(e) {}
+  closeModal('modal-add-user');
+  filterUsers();
+  toast(`${newUser.name} created!`, '✓', 'var(--mint)');
+  ['au-fn','au-ln','au-em','au-pw'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+}
+
+function exportUsers() {
+  const rows = ['ID,Name,Email,Plan,Status,Sessions,Joined,Country'];
+  USERS.forEach(u => rows.push(`${u.id},"${u.name}","${u.email}",${u.plan},${u.status},${u.sessions},${u.joined},${u.country}`));
+  const blob = new Blob([rows.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'logiclift-users.csv'; a.click();
+  toast('Exported users CSV', '↓', 'var(--mint)');
+}
+
+/* ─── LIVE SESSIONS ─── */
+const EXERCISES_LIST = ['Back Squat','Bench Press','Deadlift','Overhead Press','Barbell Row','Romanian DL','Front Squat'];
+const REGIONS_LIST = ['🇺🇸 US','🇰🇷 KR','🇩🇪 DE','🇧🇷 BR','🇯🇵 JP','🇮🇳 IN','🇮🇹 IT','🇬🇧 UK'];
+
+function initSessions() {
+  renderSessions();
+  setInterval(renderSessions, 3000);
+}
+
+function renderSessions() {
+  const tbody = $('sessions-tbody');
+  if (!tbody) return;
+  const count = 8 + Math.floor(Math.random() * 6);
+  const activeSess = $('ls-active');
+  if (activeSess) activeSess.textContent = count;
+  const reps = $('ls-reps');
+  if (reps) reps.textContent = (parseInt(reps.textContent.replace(',','')) + Math.floor(Math.random()*12)).toLocaleString();
+  tbody.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const u = USERS[Math.floor(Math.random() * USERS.length)];
+    const ex = EXERCISES_LIST[Math.floor(Math.random() * EXERCISES_LIST.length)];
+    const rp = Math.floor(Math.random() * 8) + 1;
+    const wt = (Math.floor(Math.random() * 20) * 2.5 + 60).toFixed(1);
+    const vel= (0.3 + Math.random() * 0.6).toFixed(2);
+    const fm = 70 + Math.floor(Math.random() * 28);
+    const dur= `${Math.floor(Math.random()*50)+5}m`;
+    const reg= REGIONS_LIST[Math.floor(Math.random()*REGIONS_LIST.length)];
+    const velColor = vel > 0.7 ? 'var(--mint)' : vel > 0.45 ? 'var(--gold)' : 'var(--rose)';
+    const fmColor  = fm > 85 ? 'var(--mint)' : fm > 70 ? 'var(--gold)' : 'var(--rose)';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="avatar ${u.avc}" style="width:28px;height:28px;font-size:12px;border-radius:6px;">${u.av}</div>
+          <span style="font-size:12px;color:var(--text);">${u.name.split(' ')[0]}</span>
+        </div>
+      </td>
+      <td style="font-size:12px;">${ex}</td>
+      <td style="font-family:var(--ff-mono);color:var(--gold);font-weight:700;">${rp}</td>
+      <td style="font-family:var(--ff-mono);font-size:11px;">${wt}kg</td>
+      <td style="font-family:var(--ff-mono);font-size:11px;color:${velColor};">${vel}m/s</td>
+      <td style="font-family:var(--ff-mono);font-size:11px;color:${fmColor};">${fm}%</td>
+      <td style="font-family:var(--ff-mono);font-size:11px;">${dur}</td>
+      <td>${reg}</td>
+      <td><button class="btn btn-ghost btn-xs" onclick="toast('Viewing live session','🔴','var(--rose)')">Watch</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+/* ─── ANALYTICS ─── */
+function initAnalytics() {
+  drawLineChart('an-dau-chart', [820,910,870,1020,980,1047,990,1100,1050,1090,1120,1047], 'DAU', '#f0a500', 160);
+  renderLifts();
+  renderRegionsAn();
+  drawDonut();
+  renderSessionMetrics();
+}
+
+function renderLifts() {
+  const el = $('an-lifts');
+  if (!el) return;
+  const data = [
+    {name:'Back Squat', n:48200, pct:100},
+    {name:'Bench Press', n:41800, pct:87},
+    {name:'Deadlift', n:39100, pct:81},
+    {name:'Overhead Press', n:28400, pct:59},
+    {name:'Barbell Row', n:24100, pct:50},
+    {name:'Romanian DL', n:18700, pct:39},
+  ];
+  el.innerHTML = data.map(d => `
+    <div style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+        <span style="font-weight:500;color:var(--text);">${d.name}</span>
+        <span style="font-family:var(--ff-mono);font-size:10px;color:var(--text-2);">${d.n.toLocaleString()}</span>
+      </div>
+      <div class="prog"><div class="prog-fill" style="width:${d.pct}%;background:var(--gold);"></div></div>
+    </div>`).join('');
+}
+
+function renderRegionsAn() {
+  const el = $('an-regions');
+  if (!el) return;
+  const data = [{flag:'🇺🇸',name:'United States',pct:34},{flag:'🇩🇪',name:'Germany',pct:18},{flag:'🇬🇧',name:'United Kingdom',pct:14},{flag:'🇧🇷',name:'Brazil',pct:11},{flag:'🇯🇵',name:'Japan',pct:9},{flag:'🌍',name:'Other',pct:14}];
+  el.innerHTML = data.map(r => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;">
+      <span>${r.flag}</span>
+      <span style="flex:1;font-size:12px;">${r.name}</span>
+      <span style="font-family:var(--ff-mono);font-size:10px;color:var(--gold);">${r.pct}%</span>
+      <div style="width:60px;" class="prog"><div class="prog-fill" style="width:${r.pct*100/34}%;background:var(--gold);"></div></div>
+    </div>`).join('');
+}
+
+function drawDonut() {
+  const canvas = $('an-donut');
+  if (!canvas || canvas._d) return; canvas._d = true;
+  const ctx = canvas.getContext('2d');
+  const data = [{label:'iOS',val:44,color:'#f0a500'},{label:'Android',val:38,color:'#00d4c8'},{label:'Web',val:18,color:'#2dffb0'}];
+  const cx = 55, cy = 55, r = 46, ir = 28;
+  let start = -Math.PI/2;
+  data.forEach(d => {
+    const sweep = (d.val/100)*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,start+sweep); ctx.closePath();
+    ctx.fillStyle = d.color; ctx.fill(); start += sweep;
+  });
+  ctx.beginPath(); ctx.arc(cx,cy,ir,0,Math.PI*2); ctx.fillStyle = '#0c0f14'; ctx.fill();
+  const leg = $('an-donut-legend');
+  if (leg) leg.innerHTML = data.map(d => `<div style="display:flex;align-items:center;gap:8px;font-family:var(--ff-mono);font-size:10px;color:var(--text-2);"><div style="width:8px;height:8px;border-radius:2px;background:${d.color};flex-shrink:0;"></div>${d.label} · ${d.val}%</div>`).join('');
+}
+
+function renderSessionMetrics() {
+  const el = $('an-metrics');
+  if (!el) return;
+  const metrics = [
+    {label:'Session Duration', val:'58 min', color:'var(--gold)'},
+    {label:'Sets Per Session', val:'18.4', color:'var(--cyan)'},
+    {label:'Avg Form Score', val:'87%', color:'var(--mint)'},
+    {label:'Avg Bar Velocity', val:'0.68 m/s', color:'var(--gold)'},
+    {label:'PRs This Week', val:'342', color:'var(--cyan)'},
+    {label:'Reps Auto-Counted', val:'284K', color:'var(--mint)'},
+  ];
+  el.innerHTML = metrics.map(m => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--edge);">
+      <span style="font-size:12px;color:var(--text-2);">${m.label}</span>
+      <span style="font-family:var(--ff-head);font-size:18px;color:${m.color};">${m.val}</span>
+    </div>`).join('');
+}
+
+/* ─── REVENUE ─── */
+function initRevenue() {
+  drawLineChart('rv-chart', [10400,11200,10800,12100,12900,13400,14200,14800,15600,16400,17200,18240], 'Revenue', '#00d4c8', 160);
+  renderTxns();
+}
+
+function renderTxns() {
+  const el = $('rv-txns');
+  if (!el) return;
+  const txns = [
+    {user:'alex@gym.io',plan:'Pro',amount:'$14.99',ok:true,date:'Mar 11'},
+    {user:'yuki.t@lift.jp',plan:'Pro',amount:'$14.99',ok:true,date:'Mar 11'},
+    {user:'marco@crossfit.br',plan:'Trial→Pro',amount:'$14.99',ok:true,date:'Mar 10'},
+    {user:'user_3392@mail.com',plan:'Pro',amount:'$14.99',ok:false,date:'Mar 10'},
+    {user:'coach.maya@team.io',plan:'Team',amount:'$49.00',ok:true,date:'Mar 9'},
+    {user:'luca@power.it',plan:'Team',amount:'$49.00',ok:true,date:'Mar 9'},
+    {user:'priya@lifts.in',plan:'Pro',amount:'$14.99',ok:true,date:'Mar 8'},
+  ];
+  el.innerHTML = txns.map(t => `
+    <div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--edge);font-family:var(--ff-mono);font-size:10px;">
+      <span style="flex:1;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.user}</span>
+      <span class="pill pill-gold" style="font-size:8px;">${t.plan}</span>
+      <span style="color:var(--gold);font-weight:700;">${t.amount}</span>
+      <span style="color:${t.ok?'var(--mint)':'var(--rose)'};">${t.ok?'✓':'✗'}</span>
+      <span style="color:var(--text-3);">${t.date}</span>
+    </div>`).join('');
+}
+
+/* ─── CV ENGINE ─── */
+function initCVEngine() {
+  renderModels();
+  drawBarChart('cv-bench-chart',
+    ['BlazePose','MoveNet L','MoveNet T','OpenPose'],
+    [97.2, 94.8, 98.1, 99.0],
+    ['#2dffb0','#f0a500','#00d4c8','#ff4466'],
+    130
+  );
+}
+
+const CV_MODELS = [
+  {name:'MediaPipe BlazePose', status:'active',  latency:'18ms', acc:'97.2%', color:'var(--mint)'},
+  {name:'TF MoveNet Lightning',status:'standby', latency:'12ms', acc:'94.8%', color:'var(--gold)'},
+  {name:'TF MoveNet Thunder', status:'standby', latency:'28ms', acc:'98.1%', color:'var(--gold)'},
+  {name:'OpenPose CPU',       status:'offline',  latency:'120ms',acc:'99.0%', color:'var(--rose)'},
+];
+
+function renderModels() {
+  const el = $('cv-models');
+  if (!el) return;
+  el.innerHTML = CV_MODELS.map(m => `
+    <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--lift2);border:1px solid var(--edge);border-radius:8px;margin-bottom:8px;">
+      <div style="width:8px;height:8px;border-radius:50%;background:${m.color};box-shadow:0 0 6px ${m.color};flex-shrink:0;"></div>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:500;color:var(--text);">${m.name}</div>
+        <div style="font-family:var(--ff-mono);font-size:9px;color:var(--text-3);">Accuracy: ${m.acc}</div>
+      </div>
+      <div style="font-family:var(--ff-mono);font-size:11px;font-weight:700;color:${m.color};">${m.latency}</div>
+      <span class="pill ${{active:'pill-mint',standby:'pill-gold',offline:'pill-rose'}[m.status]}">${m.status}</span>
+    </div>`).join('');
+}
+
+/* ─── NOTIFICATIONS ─── */
+const NOTIFS_DATA = [
+  {unread:true,  icon:'⚠', bg:'rgba(240,165,0,.1)', title:'Redis Cache Latency Elevated', msg:'Average response time >150ms. Auto-scaling triggered.', time:'8m ago'},
+  {unread:true,  icon:'💳', bg:'rgba(255,68,102,.1)',title:'Payment Failure Spike', msg:'3 payment failures in last hour. Stripe webhook may be delayed.', time:'24m ago'},
+  {unread:true,  icon:'🤖', bg:'rgba(0,212,200,.08)',title:'CV Model Auto-Switched', msg:'BlazePose switched to Lite mode — CPU threshold exceeded.', time:'1h ago'},
+  {unread:false, icon:'🏆', bg:'rgba(45,255,176,.08)',title:'10,000 Sessions Milestone', msg:'Platform hit 10,000 CV-tracked sessions this month!', time:'2h ago'},
+  {unread:false, icon:'👤', bg:'rgba(240,165,0,.06)',title:'New Admin Login', msg:'marco@logiclift.io logged in from a new IP (Frankfurt, DE).', time:'3h ago'},
+  {unread:false, icon:'📊', bg:'rgba(45,255,176,.08)',title:'Weekly Report Ready', msg:'Mar 4–10 analytics digest is ready for review.', time:'1d ago'},
+];
+
+function initNotifications() {
+  renderNotifs();
+}
+
+function renderNotifs() {
+  const el = $('notif-list');
+  if (!el) return;
+  el.innerHTML = NOTIFS_DATA.map(n => `
+    <div class="ncard ${n.unread?'unread':''}">
+      <div style="width:34px;height:34px;border-radius:8px;background:${n.bg};display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;">${n.icon}</div>
+      <div class="ncard-body">
+        <div class="ncard-title" style="${n.unread?'color:var(--text)':'color:var(--text-2)'}">${n.title}</div>
+        <div class="ncard-msg">${n.msg}</div>
+      </div>
+      <div class="ncard-time">${n.time}</div>
+    </div>`).join('');
+
+  // Update badge
+  const unread = NOTIFS_DATA.filter(n=>n.unread).length;
+  $('nb-notif').textContent = unread;
+  $('notif-pip').style.display = unread > 0 ? 'block' : 'none';
+}
+
+function markAllRead() {
+  NOTIFS_DATA.forEach(n => n.unread = false);
+  renderNotifs();
+  toast('All marked as read', '✓', 'var(--mint)');
+}
+
+function sendAnnouncement() {
+  const title = $('ann-title')?.value?.trim();
+  const audience = $('ann-audience')?.value || 'All Users';
+  if (!title) { toast('Enter announcement title', '⚠', 'var(--gold)'); return; }
+  toast(`"${title}" sent to ${audience}`, '📣', 'var(--gold)');
+  if ($('ann-title')) $('ann-title').value = '';
+  if ($('ann-body'))  $('ann-body').value  = '';
+}
+
+/* ─── API LOGS ─── */
+const METHODS = ['GET','GET','GET','POST','PUT','DELETE'];
+const ENDPOINTS = [
+  '/api/v1/sessions', '/api/v1/users', '/api/v1/reps',
+  '/api/v1/exercises', '/api/v1/prs', '/api/v1/auth/login',
+  '/api/v1/cv/inference', '/api/v1/velocity', '/api/v1/form-analysis', '/api/v1/goals',
+];
+const STATUSES = [200,200,200,200,201,204,400,401,404,500];
+const IPS = ['203.0.113.1','198.51.100.24','192.0.2.88','172.16.0.5','10.0.0.12'];
+
+let ALL_LOGS = [];
+
+function genLogs(n=60) {
+  const logs = [];
+  for (let i = 0; i < n; i++) {
+    const t = new Date(); t.setSeconds(t.getSeconds() - i * 8);
+    logs.push({
+      time: t.toTimeString().slice(0,8),
+      method: METHODS[Math.floor(Math.random()*METHODS.length)],
+      path: ENDPOINTS[Math.floor(Math.random()*ENDPOINTS.length)],
+      status: STATUSES[Math.floor(Math.random()*STATUSES.length)],
+      ms: Math.floor(Math.random()*180)+8,
+      ip: IPS[Math.floor(Math.random()*IPS.length)],
+    });
+  }
+  return logs;
+}
+
+function initLogs() {
+  ALL_LOGS = genLogs();
+  renderLogs(ALL_LOGS);
+}
+
+function renderLogs(data) {
+  const el = $('log-list');
+  if (!el) return;
+  el.innerHTML = (data || ALL_LOGS).map(l => `
+    <div class="log-row">
+      <span style="color:var(--text-3);">${l.time}</span>
+      <span class="lm ${l.method}">${l.method}</span>
+      <span style="color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.path}</span>
+      <span style="font-family:var(--ff-mono);font-size:10px;color:var(--text-3);">${l.ip}</span>
+      <span class="ls s${String(l.status)[0]}" style="text-align:right;">${l.status} · ${l.ms}ms</span>
+    </div>`).join('');
+}
+
+function filterLogs(q) {
+  const query = typeof q === 'string' ? q.toLowerCase() : '';
+  const method = $('log-method')?.value || '';
+  const statusP = $('log-status')?.value || '';
+  renderLogs(ALL_LOGS.filter(l => {
+    const mq = !method || l.method === method;
+    const sq = !statusP || String(l.status)[0] === statusP;
+    const pq = !query || l.path.includes(query) || l.ip.includes(query);
+    return mq && sq && pq;
+  }));
+}
+
+function refreshLogs() {
+  ALL_LOGS = genLogs();
+  renderLogs(ALL_LOGS);
+  toast('Logs refreshed', '↺', 'var(--text-3)');
+}
+
+/* ─── PERMISSIONS ─── */
+const FLAGS = [
+  {key:'vbt',     name:'Velocity-Based Training (VBT)',       desc:'Enables bar velocity tracking for all users', on:true},
+  {key:'form_ai', name:'AI Form Analysis',                     desc:'Real-time pose & form scoring via CV', on:true},
+  {key:'bar_path',name:'Bar Path Visualization',               desc:'3D bar path tracking overlay', on:true},
+  {key:'team',    name:'Team Coach Workspaces',                desc:'Enables multi-athlete coach dashboard', on:true},
+  {key:'api',     name:'External API Access',                  desc:'Developer API key generation', on:false},
+  {key:'beta_cv', name:'Beta CV Models',                       desc:'BlazePose v3 experimental access', on:false},
+  {key:'social',  name:'Social / Community Feed',              desc:'Activity sharing between athletes', on:false},
+  {key:'wearable',name:'Wearable Device Sync',                 desc:'Apple Watch / Garmin integration', on:false},
+];
+
+const ADMIN_TEAM = [
+  {name:'Sahra Reyes', email:'sahra@logiclift.io', role:'Superadmin', last:'2m ago',  av:'SR', avc:'av-gold'},
+  {name:'Marco Kline', email:'marco@logiclift.io', role:'Editor',      last:'3h ago',  av:'MK', avc:'av-cyan'},
+  {name:'Jin Park',    email:'jin@logiclift.io',   role:'Support',     last:'1d ago',  av:'JP', avc:'av-mint'},
+];
+
+function initPermissions() {
+  const ff = $('feature-flags');
+  if (ff && !ff._done) {
+    ff._done = true;
+    ff.innerHTML = FLAGS.map((f,i) => `
+      <div class="ff-row">
+        <div class="ff-info">
+          <div class="ff-name">${f.name}</div>
+          <div class="ff-desc">${f.desc}</div>
+        </div>
+        <label class="sw"><input type="checkbox" ${f.on?'checked':''} onchange="toggleFlag(${i},this.checked)"><div class="sw-track"></div></label>
+      </div>`).join('');
+  }
+
+  const at = $('admin-team');
+  if (at && !at._done) {
+    at._done = true;
+    at.innerHTML = ADMIN_TEAM.map(a => `
+      <div class="role-row">
+        <div class="avatar ${a.avc}" style="width:30px;height:30px;font-size:13px;border-radius:6px;">${a.av}</div>
+        <div style="flex:1;">
+          <div style="font-size:12px;font-weight:500;color:var(--text);">${a.name}</div>
+          <div style="font-family:var(--ff-mono);font-size:9px;color:var(--text-3);">${a.email} · ${a.last}</div>
+        </div>
+        <span class="pill ${{Superadmin:'pill-gold',Editor:'pill-cyan',Support:'pill-mint'}[a.role]}">${a.role}</span>
+      </div>`).join('');
+  }
+
+  const pc = $('plan-caps');
+  if (pc && !pc._done) {
+    pc._done = true;
+    const caps = ['CV Rep Counting','Form Analysis','Velocity (VBT)','Bar Path','Unlimited History','API Access','Team Dashboard'];
+    pc.innerHTML = caps.map(c => `
+      <div class="ff-row" style="margin-bottom:6px;">
+        <span style="font-size:12px;">${c}</span>
+        <span class="pill pill-gold" style="font-size:8px;">Pro+</span>
+      </div>`).join('');
+  }
+}
+
+function toggleFlag(i, val) {
+  FLAGS[i].on = val;
+  toast((val?'Enabled':'Disabled') + ': ' + FLAGS[i].name, val?'✓':'✕', val?'var(--mint)':'var(--rose)');
+}
+
+/* ─── PROFILE ─── */
+function saveProfile() {
+  const fn = $('set-fname')?.value || '';
+  const ln = $('set-lname')?.value || '';
+  const name = `${fn} ${ln}`.trim();
+  if (name) {
+    $('sb-name').textContent = name;
+    $('sb-avatar').textContent = (fn[0]+(ln[0]||'')).toUpperCase();
+  }
+  toast('Profile saved!', '👤', 'var(--gold)');
+}
+
+/* ─── CHART HELPERS ─── */
+function drawLineChart(canvasId, data, label, color, h) {
+  const canvas = $(canvasId);
+  if (!canvas || canvas._drawn) return; canvas._drawn = true;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = canvas.offsetWidth * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = canvas.offsetWidth, H = h;
+  const pad = { t:10, r:20, b:22, l:10 };
+  const cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
+  const max = Math.max(...data) * 1.08;
+  const min = Math.min(...data) * 0.92;
+  const rng = max - min;
+  const pts = data.map((v,i) => ({
+    x: pad.l + i * cW / (data.length-1),
+    y: pad.t + cH - (v - min)/rng * cH
+  }));
+  ctx.fillStyle = '#0c0f14'; ctx.fillRect(0,0,W,H);
+  // Grid
+  for (let i=0; i<=4; i++) {
+    const y = pad.t + (i/4)*cH;
+    ctx.strokeStyle = 'rgba(31,37,53,0.9)'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W-pad.r, y); ctx.stroke();
+  }
+  // Area
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pad.t + cH);
+  pts.forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.lineTo(pts[pts.length-1].x, pad.t + cH);
+  ctx.closePath();
+  const g = ctx.createLinearGradient(0, pad.t, 0, pad.t+cH);
+  g.addColorStop(0, color.replace(')', ', 0.25)').replace('rgb', 'rgba').replace(/^#/, 'rgba(') || `${color}40`);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  // Simpler gradient using color directly
+  const g2 = ctx.createLinearGradient(0, 0, 0, H);
+  g2.addColorStop(0, color + '40');
+  g2.addColorStop(1, color + '00');
+  ctx.fillStyle = g2; ctx.fill();
+  // Line
+  ctx.beginPath();
+  pts.forEach((p,i) => i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+  ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+  // Dots
+  pts.forEach(p => {
+    ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+    ctx.fillStyle = color; ctx.fill();
+  });
+  // Labels (months)
+  const lbls = ['Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep'];
+  ctx.fillStyle = 'rgba(66,77,102,0.9)'; ctx.font = `8px IBM Plex Mono`;
+  ctx.textAlign = 'center';
+  pts.forEach((p,i) => { if (i % 2 === 0 || pts.length <= 8) ctx.fillText(lbls[i]||'', p.x, H-4); });
+}
+
+function drawBarChart(canvasId, labels, values, colors, h) {
+  const canvas = $(canvasId);
+  if (!canvas || canvas._drawn) return; canvas._drawn = true;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = canvas.offsetWidth * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = canvas.offsetWidth, H = h;
+  const pad = {t:8, r:10, b:22, l:10};
+  const cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
+  const max = Math.max(...values) * 1.05;
+  const bw = cW / labels.length;
+  ctx.fillStyle = '#0c0f14'; ctx.fillRect(0,0,W,H);
+  for (let i=0;i<=4;i++) {
+    const y = pad.t + (i/4)*cH;
+    ctx.strokeStyle = 'rgba(31,37,53,0.9)'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W-pad.r, y); ctx.stroke();
+  }
+  labels.forEach((lbl, i) => {
+    const bh = (values[i]/max)*cH;
+    const x = pad.l + i*bw + bw*0.15;
+    const bww = bw * 0.7;
+    const g = ctx.createLinearGradient(0, pad.t+cH-bh, 0, pad.t+cH);
+    g.addColorStop(0, colors[i]); g.addColorStop(1, colors[i]+'44');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.roundRect(x, pad.t+cH-bh, bww, bh, [3,3,0,0]);
+    ctx.fill();
+    ctx.fillStyle = colors[i]; ctx.font = `8px IBM Plex Mono`; ctx.textAlign = 'center';
+    ctx.fillText(values[i]+'%', x+bww/2, pad.t+cH-bh-4);
+    ctx.fillStyle = 'rgba(66,77,102,0.9)';
+    ctx.fillText(lbl, x+bww/2, H-5);
+  });
+}
+
+/* ─── REAL-TIME METRICS ─── */
+setInterval(() => {
+  // Pulse API latency
+  const latencies = ['38ms','42ms','45ms','51ms','39ms'];
+  const el = $('sh-api');
+  if (el) el.textContent = latencies[Math.floor(Math.random()*latencies.length)];
+  // Pulse CPU
+  const el2 = $('sh-cpu');
+  if (el2) el2.textContent = (60 + Math.floor(Math.random()*20)) + '%';
+  // DAU
+  const dau = $('kpi-dau');
+  if (dau) dau.textContent = (1040 + Math.floor(Math.random()*15)).toLocaleString();
+}, 5000);
+
+/* ─── INIT APP ─── */
+function initApp() {
+  updateClock();
+  initPage('overview');
+  PAGE_INITS['overview'] = true;
+  // Slight delay for DOM layout
+  setTimeout(() => {
+    drawLineChart('ov-users-chart', [120,145,132,158,170,165,188,201,195,218,230,218], 'Users', '#f0a500', 140);
+    drawLineChart('ov-rev-chart', [10400,11200,10800,12100,12900,13400,14200,14800,15600,16400,17200,18240], 'Revenue', '#00d4c8', 140);
+  }, 150);
+}
+</script>
+</body>
+</html>
